@@ -19,7 +19,7 @@ const limiter = rateLimit({
 });
 
 // login və register routelara tətbiq et
-app.use("/api/users/login", limiter);
+
 app.use("/api/users/register", limiter);
 
 // test route

@@ -3,8 +3,13 @@ import {
   registerUser,
   loginUser,
   getProfile,
+  verifyOtp,
+  resendOtp,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/userController.js";
 import protect from "../middlewares/authMiddleware.js";
+import { loginLimiter, otpLimiter } from "../middlewares/rateLImit.js";
 
 const router = express.Router();
 
@@ -12,7 +17,12 @@ const router = express.Router();
 router.post("/register", registerUser);
 
 // Mövcud user ilə login
-router.post("/login", loginUser);
 
 router.get("/profile", protect, getProfile);
+router.post("/verify-otp", otpLimiter, verifyOtp);
+router.post("/resend-otp", otpLimiter, resendOtp);
+router.post("/login", loginLimiter, loginUser);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
+
 export default router;
