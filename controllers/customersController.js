@@ -4,7 +4,7 @@ export const getAllCustomers = async (req, res) => {
     try {
         const searchQuery = req.query.search || "";
 
-        const customers = await Customer.find({ isActive: true, $text: { $search: searchQuery } }).sort({
+        const customers = await Customer.find({ $text: { $search: searchQuery } }).sort({
             createdAt: -1,
         });
 
@@ -68,7 +68,35 @@ export const createCustomer = async (req, res) => {
     }
 };
 
-export const changeCustomerActiveStatus = async (req, res) => {
+export const editCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const customer = await Customer.findById(id);
+
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found." });
+        }
+
+        customer.companyName = req.body.companyName || customer.companyName;
+        customer.contactPerson = req.body.contactPerson || customer.contactPerson;
+        customer.email = req.body.email || customer.email;
+        customer.location = req.body.location || customer.location;
+        customer.phone = req.body.phone || customer.phone;
+        customer.tin = req.body.tin || customer.tin;
+        customer.segment = req.body.segment || customer.segment;
+
+        await customer.save();
+
+        res.status(200).json({
+            message: "Customer updated successfully",
+            data: customer,
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error." });
+    }
+};
+
+export const changeCustomerStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const customer = await Customer.findById(id);

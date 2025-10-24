@@ -2,7 +2,11 @@ import Sale from "../models/salesSchema.js";
 
 export const getAllSales = async (req, res) => {
     try {
-        const sales = await Sale.find();
+        const searchQuery = req.query.search || "";
+        
+        const sales = await Sale.find({ $text: { $search: searchQuery } }).sort({
+            createdAt: -1,
+        });
 
         if (!sales || !sales.length) {
             return res.status(404).json({ message: "No sales records found." });
@@ -56,6 +60,31 @@ export const createSale = async (req, res) => {
         res.status(201).json({
             message: "Sale record created successfully",
             data: savedSale,
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error." });
+    }
+};
+
+export const editSale = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sale = await Sale.findById(id);
+
+        if (!sale) {
+            return res.status(404).json({ message: "Sale record not found." });
+        }
+
+        sale.invoiceNumber = req.body.invoiceNumber || sale.invoiceNumber;
+        sale.date = req.body.date || sale.date;
+        sale.customerId = req.body.customerId || sale.customerId;
+        sale.amount = req.body.amount || sale.amount;
+
+        await sale.save();
+
+        res.status(200).json({
+            message: "Sale record updated successfully",
+            data: sale,
         });
     } catch (error) {
         res.status(500).json({ message: "Internal server error." });
