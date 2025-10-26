@@ -1,4 +1,5 @@
 import Agreement from "../models/agreementsSchema.js";
+import Supplier from "../models/suppliersSchema.js";
 
 export const getAllAgreements = async (req, res) => {
     try {
@@ -47,6 +48,11 @@ export const createAgreement = async (req, res) => {
             return res.status(400).json({ message: "All required fields must be provided." });
         }
 
+        const supplier = await Supplier.findById(supplierId);
+        if (!supplier) {
+            return res.status(404).json({ message: "Supplier not found." });
+        }
+
         const newAgreement = new Agreement({
             agreementNumber,
             supplierId,
@@ -79,13 +85,15 @@ export const editAgreement = async (req, res) => {
         }
 
         agreement.agreementNumber = req.body.agreementNumber || agreement.agreementNumber;
-        agreement.supplierId = req.body.supplierId || agreement.supplierId;
         agreement.startDate = req.body.startDate || agreement.startDate;
         agreement.endDate = req.body.endDate || agreement.endDate;
         agreement.amount = req.body.amount || agreement.amount;
         agreement.currency = req.body.currency || agreement.currency;
         agreement.terms = req.body.terms || agreement.terms;
         agreement.notes = req.body.notes || agreement.notes;
+
+        const supplier = await Supplier.findById(req.body.supplierId);
+        agreement.supplierId = req.body.supplierId ? supplier._id : agreement.supplierId;
 
         await agreement.save();
 

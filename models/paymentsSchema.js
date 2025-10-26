@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const PaymentSchema = new mongoose.Schema(
     {
         date: { type: Date, required: true },
-        // customerId: { type: Schema.Types.ObjectId, ref: "Customer", required: true },
+        customerId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer", required: true },
         invoiceNumber: { type: String, required: true, trim: true, unique: true },
         amount: { type: Number, required: true },
         method: { type: String, enum: ["Cash", "Credit Card", "Bank Transfer"], required: true },

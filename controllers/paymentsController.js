@@ -1,3 +1,4 @@
+import Customer from "../models/customersSchema";
 import Payment from "../models/paymentsSchema";
 
 export const getALLPayments = async (req, res) => {
@@ -47,6 +48,11 @@ export const createPayment = async (req, res) => {
             return res.status(400).json({ message: "All fields are required." });
         }
 
+        const customer = await Customer.findById(customerId);
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found." });
+        }
+
         const newPayment = new Payment({
             date,
             customerId,
@@ -81,6 +87,10 @@ export const editPayment = async (req, res) => {
         payment.amount = req.body.amount || payment.amount;
         payment.method = req.body.method || payment.method;
         payment.status = req.body.status || payment.status;
+
+        const customer = await Customer.findById(req.body.customerId);
+
+        payment.customerId = req.body.customerId ? customer._id : payment.customerId;
 
         await payment.save();
 

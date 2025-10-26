@@ -6,6 +6,8 @@ import customerRoutes from "./routes/customersRoute.js";
 import salesRoute from "./routes/salesRoute.js";
 import suppliersRoute from "./routes/suppliersRoute.js";
 import agreementsRoute from "./routes/agreementsRoute.js";
+import supplierPaymentsRoute from "./routes/supplierPaymentsRoute.js";
+import ordersRoute from "./routes/ordersRoute.js";
 import { connectDB } from "./config/db.js";
 import rateLimit from "express-rate-limit";
 
@@ -37,6 +39,8 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/sales", salesRoute);
 app.use("/api/suppliers", suppliersRoute);
 app.use("/api/agreements", agreementsRoute);
+app.use("/api/supplier-payments", supplierPaymentsRoute);
+app.use("/api/orders", ordersRoute);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server ${PORT}-da işləyir`));

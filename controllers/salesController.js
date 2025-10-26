@@ -1,3 +1,4 @@
+import Customer from "../models/customersSchema.js";
 import Sale from "../models/salesSchema.js";
 
 export const getAllSales = async (req, res) => {
@@ -47,6 +48,11 @@ export const createSale = async (req, res) => {
             return res.status(400).json({ message: "All fields are required." });
         }
 
+        const customer = await Customer.findById(customerId);
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found." });
+        }
+
         const newSale = new Sale({
             invoiceNumber,
             date,
@@ -77,8 +83,12 @@ export const editSale = async (req, res) => {
 
         sale.invoiceNumber = req.body.invoiceNumber || sale.invoiceNumber;
         sale.date = req.body.date || sale.date;
-        sale.customerId = req.body.customerId || sale.customerId;
         sale.amount = req.body.amount || sale.amount;
+        sale.status = req.body.status || sale.status;
+
+        const customer = await Customer.findById(req.body.customerId);
+
+        sale.customerId = req.body.customerId ? customer._id : sale.customerId;
 
         await sale.save();
 
@@ -92,27 +102,6 @@ export const editSale = async (req, res) => {
 };
 
 export const changeSaleStatus = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const sale = await Sale.findById(id);
-
-        if (!sale) {
-            return res.status(404).json({ message: "Sale record not found." });
-        }
-
-        sale.status = req.body.status || sale.status;
-        await sale.save();
-
-        res.status(200).json({
-            message: "Sale record updated successfully",
-            data: sale,
-        });
-    } catch (error) {
-        res.status(500).json({ message: "Internal server error." });
-    }
-};
-
-export const changeSaleActiveStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const sale = await Sale.findById(id);
