@@ -3,21 +3,22 @@ import mongoose from "mongoose";
 const leaveSchema = new mongoose.Schema({
   leaveId: { type: String },
   leaveType: { type: String, enum: ["annual", "sick", "unpaid", "other"], default: "annual" },
-  startDate: { type: String },
-  endDate: { type: String },
+  startDate: { type: Date },
+  endDate: { type: Date },
   totalDaysRequested: { type: Number, default: 0 },
   daysUsed: { type: Number, default: 0 },
   daysRemaining: { type: Number, default: 0 },
   status: { type: String, enum: ["approved", "pending", "rejected"], default: "pending" },
   createdAt: { type: Date, default: Date.now },
+  reason :{ type: String },
   notes: { type: String }
 });
 
 const attendanceSchema = new mongoose.Schema({
   attendanceId: { type: String },
   date: { type: String },
-  checkInTime: { type: String },
-  checkOutTime: { type: String },
+  checkInTime: { type: Date },
+  checkOutTime: { type: Date },
   status: { type: String, enum: ["present", "absent", "on_leave", "remote"], default: "present" },
   isLate: { type: Boolean, default: false },
   lateMinutes: { type: Number, default: 0 },
@@ -41,7 +42,9 @@ companyId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
   onLeave: { type: Boolean, default: false },
   currentLeaveId: { type: String, default: null },
   leaves: [leaveSchema],
-  attendances: [attendanceSchema]
+  attendances: [attendanceSchema],
+  Department:{ type: String,},
+
 }, { timestamps: true });
 
 export default mongoose.model("Employee", employeeSchema);
