@@ -4,10 +4,12 @@ import dotenv from "dotenv";
 import userRoutes from "./routes/userRoutes.js";
 import { connectDB } from "./config/db.js";
 import rateLimit from "express-rate-limit";
+import transactionRoutes from "./routes/transactionRoutes.js";
+import cashAndBankRoutes from "./routes/cashAndBankRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 dotenv.config();
 const app = express();
-
 // middlewares
 app.use(cors());
 app.use(express.json());
@@ -18,17 +20,18 @@ const limiter = rateLimit({
   message: "Çox sorğu göndərdiniz, bir az gözləyin",
 });
 
-// login və register routelara tətbiq et
-
-app.use("/api/users/register", limiter);
-
 // test route
 app.get("/", (req, res) => {
   res.send("Nummix backend işləyir 🚀");
 });
-
-connectDB();
+// Rate limiter tətbiqi
+app.use("/api/users/register", limiter);
+// API routelar
 app.use("/api/users", userRoutes);
+app.use("/api/transactions", transactionRoutes);
+app.use("/api/cash-bank", cashAndBankRoutes);
+app.use("/api/payments", paymentRoutes);
+connectDB();
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server ${PORT}-da işləyir`));
