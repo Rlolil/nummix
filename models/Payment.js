@@ -24,8 +24,9 @@ const paymentSchema = new mongoose.Schema(
       required: true,
     },
     currency: {
+      type: String,
       enum: ["AZN", "USD", "RUB", "EUR"],
-      default: "AZN", 
+      default: "AZN",
     },
     status: {
       type: String,

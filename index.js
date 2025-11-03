@@ -7,7 +7,7 @@ import rateLimit from "express-rate-limit";
 import transactionRoutes from "./routes/transactionRoutes.js";
 import cashAndBankRoutes from "./routes/cashAndBankRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
-
+import budgetRoutes from "./routes/budgetRoutes.js";
 dotenv.config();
 const app = express();
 // middlewares
@@ -31,6 +31,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/cash-bank", cashAndBankRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/budgets", budgetRoutes);
 connectDB();
 
 const PORT = process.env.PORT || 5000;
