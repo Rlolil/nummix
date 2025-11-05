@@ -30,9 +30,15 @@ const employeeSchema = new mongoose.Schema({
   lastName: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   phone: { type: String },
-  position: { type: String },
 companyId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  salary: { type: Number, default: 0 },
+  gross: { type: Number, default: 0 },
+  tax:{ type: Number, default: 0 },
+  social_pay:{ type: Number, default: 0 },
+  Net_salary:{ type: Number, default: 0 },
+  salary_status:{ type: String, default: 0 },
+  Recent_Notifications:{type: Array, default: 0 },
+
+
   status: { type: String, enum: ["active", "on_leave", "terminated"], default: "active" },
   hireDate: { type: String },
   lateAllowed: { type: Number, default: 0 },
@@ -44,7 +50,12 @@ companyId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
   leaves: [leaveSchema],
   attendances: [attendanceSchema],
   Department:{ type: String,},
+  filename: { type: String},
+  contentType: { type: String }, // image/png, application/pdf və s.
+  data: { type: Buffer },
 
-}, { timestamps: true });
+}, 
+{ timestamps: true });
+
 
 export default mongoose.model("Employee", employeeSchema);

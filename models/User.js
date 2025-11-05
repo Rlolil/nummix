@@ -39,7 +39,7 @@ const userSchema = new mongoose.Schema(
     expected_taxes: { type: Number },
     vacation: { type: Number },
     Attendance: { type: Number },
-    position: { type: String },
+    position: { type: Array },
     taxes: { type: String },
     Bonuses: { type: String },
     waiting_request_Graduation: { type: Number },
@@ -48,7 +48,7 @@ const userSchema = new mongoose.Schema(
     excused_employee: { type: Number },
     Unexcused_employee: { type: Array },
     Attendance_employee: { type: Array },
-   Common_gross_payroll: {
+   gross: {
     January: { type: Number, default: 0 },
     February: { type: Number, default: 0 },
     March: { type: Number, default: 0 },
@@ -61,6 +61,66 @@ const userSchema = new mongoose.Schema(
     October: { type: Number, default: 0 },
     November: { type: Number, default: 0 },
     December: { type: Number, default: 0 },
+  },
+
+  tax: {
+    January: { type: Number, default: 0 },
+    February: { type: Number, default: 0 },
+    March: { type: Number, default: 0 },
+    April: { type: Number, default: 0 },
+    May: { type: Number, default: 0 },
+    June: { type: Number, default: 0 },
+    July: { type: Number, default: 0 },
+    August: { type: Number, default: 0 },
+    September: { type: Number, default: 0 },
+    October: { type: Number, default: 0 },
+    November: { type: Number, default: 0 },
+    December: { type: Number, default: 0 },
+  },
+
+  social_pay: {
+    January: { type: Number, default: 0 },
+    February: { type: Number, default: 0 },
+    March: { type: Number, default: 0 },
+    April: { type: Number, default: 0 },
+    May: { type: Number, default: 0 },
+    June: { type: Number, default: 0 },
+    July: { type: Number, default: 0 },
+    August: { type: Number, default: 0 },
+    September: { type: Number, default: 0 },
+    October: { type: Number, default: 0 },
+    November: { type: Number, default: 0 },
+    December: { type: Number, default: 0 },
+  },
+
+  Net_salary: {
+    January: { type: Number, default: 0 },
+    February: { type: Number, default: 0 },
+    March: { type: Number, default: 0 },
+    April: { type: Number, default: 0 },
+    May: { type: Number, default: 0 },
+    June: { type: Number, default: 0 },
+    July: { type: Number, default: 0 },
+    August: { type: Number, default: 0 },
+    September: { type: Number, default: 0 },
+    October: { type: Number, default: 0 },
+    November: { type: Number, default: 0 },
+    December: { type: Number, default: 0 },
+  },
+
+  salary_status: {
+    January: { type: String, default: 0 },
+    February: { type: String, default: 0 },
+    March: { type: String, default: 0 },
+    April: { type: String, default: 0 },
+    May: { type: String, default: 0 },
+    June: { type: String, default: 0 },
+    July: { type: String, default: 0 },
+    August: { type: String, default: 0 },
+    September: { type: String, default: 0 },
+    October: { type: String, default: 0 },
+    November: { type: String, default: 0 },
+    December: { type: String, default: 0 },
   },
 
   Common_net_Payroll: {
@@ -92,6 +152,23 @@ const userSchema = new mongoose.Schema(
     November: { type: Number, default: 0 },
     December: { type: Number, default: 0 },
   },
+  common_late:{type: Number, default: 0 },
+  common_attendance:{type: Number, default: 0 },
+  new_employees:{type: Number, default: 0 },
+ left_job:{type: Number, default: 0 },
+ change_employees:{type: Number, default: 0 },
+ Payroll_fund:{type: Number, default: 0 },
+ change_Payroll_fund:{type: Number, default: 0 },
+ Average_salary:{type: Number, default: 0 },
+ change_Average_salary:{type: Number, default: 0 },
+ Attendance:{type: Number, default: 0 },
+change_Attendance:{type: Number, default: 0 },
+Employee_turnover:{type: Number, default: 0 },
+change_Employee_turnover:{type: Number, default: 0 },
+
+
+
+
 
 
 
