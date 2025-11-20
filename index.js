@@ -55,8 +55,6 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/general-ledger", generalLedgerRoutes);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-app.use("/api/users", userRoutes);
-app.use("/api/employees", employeeRoutes);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use("/api/employees", employeeRoutes);

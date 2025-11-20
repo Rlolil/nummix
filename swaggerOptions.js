@@ -32,6 +32,17 @@ const options = {
     "./controllers/PaymentController.js",
     "./controllers/UserController.js",
     "./controllers/GeneralLedgerController.js",
+    "./routes/employeeRoutes.js",
+    "./routes/customersRoute.js",
+    "./routes/agreementsRoute.js",
+    "./routes/salesRoute.js",
+    "./routes/suppliersRoute.js",
+    "./routes/supplierPaymentsRoute.js",
+    "./routes/ordersRoute.js",
+    "./routes/productsRoute.js",
+    "./routes/warehousesRoute.js",
+    "./routes/warehouseOperationsRoute.js",
+    "./routes/inventoryRoute.js",
   ],
 };
 
