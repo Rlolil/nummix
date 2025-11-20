@@ -12,9 +12,17 @@ const router = express.Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: Inventory
+ *   description: Inventarın idarə edilməsi
+ */
+
+/**
+ * @swagger
  * /inventory:
  *   get:
  *     summary: Bütün inventarları gətir
+ *     tags: [Inventory]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -28,6 +36,7 @@ router.get("/", protect, getAllInventory);
  * /inventory/{id}:
  *   get:
  *     summary: ID üzrə inventar məlumatını gətir
+ *     tags: [Inventory]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -49,6 +58,7 @@ router.get("/:id", protect, getSingleInventory);
  * /inventory:
  *   post:
  *     summary: Yeni inventar yarat
+ *     tags: [Inventory]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -82,6 +92,7 @@ router.post("/", protect, createInventory);
  * /inventory/{id}:
  *   patch:
  *     summary: Inventar məlumatını yenilə
+ *     tags: [Inventory]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -118,6 +129,7 @@ router.patch("/:id", protect, editInventory);
  * /inventory/{id}/status:
  *   patch:
  *     summary: Inventarın statusunu dəyiş
+ *     tags: [Inventory]
  *     security:
  *       - bearerAuth: []
  *     parameters:

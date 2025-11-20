@@ -5,9 +5,17 @@ const router = express.Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: CashAndBank
+ *   description: Nağd və bank əməliyyatları
+ */
+
+/**
+ * @swagger
  * /cash-and-bank:
  *   post:
  *     summary: Yeni nağd və bank əməliyyatı yaratmaq
+ *     tags: [CashAndBank]
  *     requestBody:
  *       required: true
  *       content:
@@ -36,6 +44,7 @@ router.post("/", cashAndBankController.createTransaction);
  * /cash-and-bank:
  *   get:
  *     summary: Bütün əməliyyatları gətirmək
+ *     tags: [CashAndBank]
  *     responses:
  *       200:
  *         description: Transaction siyahısı
@@ -47,6 +56,7 @@ router.get("/", cashAndBankController.getAllTransactions);
  * /cash-and-bank/{id}:
  *   get:
  *     summary: ID üzrə əməliyyat məlumatını gətirmək
+ *     tags: [CashAndBank]
  *     parameters:
  *       - in: path
  *         name: id
@@ -64,6 +74,7 @@ router.get("/:id", cashAndBankController.getTransactionById);
  * /cash-and-bank/{id}:
  *   put:
  *     summary: Əməliyyatı yeniləmək
+ *     tags: [CashAndBank]
  *     parameters:
  *       - in: path
  *         name: id
@@ -98,6 +109,7 @@ router.put("/:id", cashAndBankController.updateTransaction);
  * /cash-and-bank/{id}:
  *   delete:
  *     summary: Əməliyyatı silmək
+ *     tags: [CashAndBank]
  *     parameters:
  *       - in: path
  *         name: id

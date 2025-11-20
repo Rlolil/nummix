@@ -12,9 +12,17 @@ const router = express.Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: Orders
+ *   description: Sifarişlərin idarə edilməsi
+ */
+
+/**
+ * @swagger
  * /orders:
  *   get:
  *     summary: Bütün sifarişləri gətir
+ *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -28,6 +36,7 @@ router.get("/", protect, getAllOrders);
  * /orders/{id}:
  *   get:
  *     summary: ID üzrə sifariş məlumatını gətir
+ *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -49,6 +58,7 @@ router.get("/:id", protect, getSingleOrder);
  * /orders:
  *   post:
  *     summary: Yeni sifariş yarat
+ *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -91,6 +101,7 @@ router.post("/", protect, createOrder);
  * /orders/{id}:
  *   patch:
  *     summary: Sifariş məlumatlarını yenilə
+ *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -129,6 +140,7 @@ router.patch("/:id", protect, editOrder);
  * /orders/{id}/status:
  *   patch:
  *     summary: Sifariş statusunu dəyişdir
+ *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     parameters:

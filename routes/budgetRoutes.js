@@ -13,9 +13,17 @@ const router = express.Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: Budgets
+ *   description: Büdcə ilə əlaqəli əməliyyatlar
+ */
+
+/**
+ * @swagger
  * /budgets:
  *   post:
  *     summary: Yeni büdcə planı yaratmaq
+ *     tags: [Budgets]
  *     requestBody:
  *       required: true
  *       content:
@@ -40,6 +48,7 @@ router.post("/", createBudget);
  * /budgets:
  *   get:
  *     summary: Bütün büdcə planlarını gətirmək
+ *     tags: [Budgets]
  *     responses:
  *       200:
  *         description: Büdcələr listi
@@ -51,6 +60,7 @@ router.get("/", getBudgets);
  * /budgets/export/excel:
  *   get:
  *     summary: Büdcə məlumatlarını Excel-ə ixrac et
+ *     tags: [Budgets]
  *     responses:
  *       200:
  *         description: Excel faylı download olunur
@@ -62,6 +72,7 @@ router.get("/export/excel", exportBudgetToExcel);
  * /budgets/{department}/{year}:
  *   get:
  *     summary: Departament üzrə illik büdcə detalları
+ *     tags: [Budgets]
  *     parameters:
  *       - in: path
  *         name: department
@@ -84,6 +95,7 @@ router.get("/:department/:year", getBudgetByDepartment);
  * /budgets/{id}:
  *   put:
  *     summary: Büdcəni yeniləmək
+ *     tags: [Budgets]
  *     parameters:
  *       - in: path
  *         name: id
@@ -110,6 +122,7 @@ router.put("/:id", updateBudget);
  * /budgets/{id}:
  *   delete:
  *     summary: Büdcəni silmək
+ *     tags: [Budgets]
  *     parameters:
  *       - in: path
  *         name: id
@@ -127,6 +140,7 @@ router.delete("/:id", deleteBudget);
  * /budgets/report:
  *   get:
  *     summary: Büdcə hesabatı
+ *     tags: [Budgets]
  *     responses:
  *       200:
  *         description: Büdcə hesabat məlumatları

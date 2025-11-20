@@ -11,9 +11,17 @@ const router = express.Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: Transactions
+ *   description: Transaction əməliyyatları
+ */
+
+/**
+ * @swagger
  * /transactions:
  *   post:
  *     summary: Yeni transaction yaratmaq
+ *     tags: [Transactions]
  *     requestBody:
  *       required: true
  *       content:
@@ -52,6 +60,7 @@ router.post("/", createTransaction);
  * /transactions:
  *   get:
  *     summary: Bütün transaction-ları gətirmək
+ *     tags: [Transactions]
  *     responses:
  *       200:
  *         description: Transaction siyahısı
@@ -63,6 +72,7 @@ router.get("/", getAllTransactions);
  * /transactions/{id}:
  *   get:
  *     summary: ID üzrə transaction məlumatını gətirmək
+ *     tags: [Transactions]
  *     parameters:
  *       - in: path
  *         name: id
@@ -80,6 +90,7 @@ router.get("/:id", getTransactionById);
  * /transactions/{id}:
  *   put:
  *     summary: Transaction yeniləmək
+ *     tags: [Transactions]
  *     parameters:
  *       - in: path
  *         name: id
@@ -124,6 +135,7 @@ router.put("/:id", updateTransaction);
  * /transactions/{id}:
  *   delete:
  *     summary: Transaction silmək
+ *     tags: [Transactions]
  *     parameters:
  *       - in: path
  *         name: id

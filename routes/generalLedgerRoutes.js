@@ -5,9 +5,17 @@ const router = express.Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: GeneralLedger
+ *   description: Baş Kitab və maliyyə ümumiləşdirmələri
+ */
+
+/**
+ * @swagger
  * /general-ledger:
  *   get:
  *     summary: Baş Kitab + Ümumi Aktivlər, Öhdəliklər, Kapital, Gəlir, Xərc
+ *     tags: [GeneralLedger]
  *     responses:
  *       200:
  *         description: General Ledger məlumatları

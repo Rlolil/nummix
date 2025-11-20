@@ -11,9 +11,17 @@ const router = express.Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: Dashboard
+ *   description: Dashboard ilə əlaqəli əməliyyatlar
+ */
+
+/**
+ * @swagger
  * /dashboard/stats:
  *   get:
  *     summary: Ümumi gəlir, ümumi xərclər və xalis mənfəət
+ *     tags: [Dashboard]
  *     responses:
  *       200:
  *         description: Dashboard stats
@@ -31,6 +39,7 @@ router.get("/stats", getDashboardStats);
  * /dashboard/assets:
  *   get:
  *     summary: Ümumi aktivlər (Cash + Bank)
+ *     tags: [Dashboard]
  *     responses:
  *       200:
  *         description: Ümumi aktivlər və breakdown
@@ -51,6 +60,7 @@ router.get("/assets", getTotalAssets);
  * /dashboard/finance/last6months:
  *   get:
  *     summary: Son 6 ay Gəlir və Xərc
+ *     tags: [Dashboard]
  *     responses:
  *       200:
  *         description: Aylara görə gəlir və xərclər
@@ -71,6 +81,7 @@ router.get("/finance/last6months", getIncomeExpenseLast6Months);
  * /dashboard/profit-dynamics:
  *   get:
  *     summary: Son 6 ay Mənfəət Dinamikası
+ *     tags: [Dashboard]
  *     responses:
  *       200:
  *         description: Aylara görə mənfəət
@@ -89,6 +100,7 @@ router.get("/profit-dynamics", getProfitDynamicsLast6Months);
  * /dashboard/balance-percentage:
  *   get:
  *     summary: Balansın hesablar üzrə faizlə bölünməsi
+ *     tags: [Dashboard]
  *     responses:
  *       200:
  *         description: Aktivlər, öhdəliklər və kapital faizləri
