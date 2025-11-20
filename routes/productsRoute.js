@@ -1,12 +1,12 @@
 import express from "express";
 import protect from "../middlewares/authMiddleware.js";
 import {
-  getAllProducts,
-  getSingleProduct,
-  createProduct,
-  editProduct,
-  changeProductStatus,
-  deleteProduct,
+    changeProductStatus,
+    createProduct,
+    deleteProduct,
+    editProduct,
+    getAllProducts,
+    getSingleProduct,
 } from "../controllers/productsController.js";
 
 const router = express.Router();

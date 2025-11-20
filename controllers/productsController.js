@@ -1,7 +1,7 @@
 import Product from "../models/productsSchema.js";
 
 // 🔹 Bütün məhsulları gətir (global və user-specific)
-export const getProducts = async (req, res) => {
+export const getAllProducts = async (req, res) => {
   try {
     const searchQuery = req.query.search || "";
     const products = await Product.find({
@@ -28,7 +28,7 @@ export const getProducts = async (req, res) => {
 };
 
 // 🔹 ID ilə məhsulu gətir
-export const getProductById = async (req, res) => {
+export const getSingleProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const product = await Product.findOne({ _id: id, userId: req.user?._id });
