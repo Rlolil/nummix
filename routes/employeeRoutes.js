@@ -8,7 +8,7 @@ import {
   deleteEmployee,
   getEmployeeImage,
   updateSalary,
-getNotifications,
+  getNotifications,
   getNotificationById,
   addNotification,
   updateNotification,
@@ -26,8 +26,13 @@ getNotifications,
   getEmployeesByCompany,
   getEmployeesByStatus,
   getEmployeeLeaveById,
-getAttendanceById,
-
+  getAttendanceById,
+  // Yeni əlavə edilən funksiyalar
+  updateEmployeeType,
+  getEmployeePayments,
+  addEmployeePayment,
+  updateEmployeeTaxData,
+  calculateEmployeeTaxes
 } from "../controllers/employeeController.js";
 
 const router = express.Router();
@@ -53,26 +58,29 @@ router.delete("/:id", deleteEmployee);
 // 🖼️ Image Routes
 router.get("/:id/image", getEmployeeImage);
 
-// 💰 Salary Routes
+// 💰 Salary & Tax Routes (YENİ ƏLAVƏLƏR)
 router.put("/:id/salary", updateSalary);
+router.put("/:id/employee-type", updateEmployeeType);           // İşçi növünü yenilə
+router.get("/:id/payments", getEmployeePayments);               // İşçi ödənişlərini gətir
+router.post("/:id/payments", addEmployeePayment);               // İşçi ödənişi əlavə et
+router.put("/:id/tax-data", updateEmployeeTaxData);             // Vergi məlumatlarını yenilə
+router.post("/:id/calculate-taxes", calculateEmployeeTaxes);    // Vergiləri hesabla
 
 // 🔔 Notification Routes
-router.get("/:id/notifications", getNotifications);                          // Bütün notificationlar
-router.get("/:id/notifications/filter", getNotificationsByStatus);           // Statusa görə filter
-router.get("/:id/notifications/:notificationId", getNotificationById);       // Xüsusi notification
-router.post("/:id/notifications", addNotification);                          // Notification əlavə et
-router.put("/:id/notifications/:notificationId", updateNotification);        // Notification yenilə
-router.delete("/:id/notifications/:notificationId", deleteNotification);     // Xüsusi notification sil
-router.delete("/:id/notifications", clearNotifications);                     // Bütün notificationları təmizlə
-
+router.get("/:id/notifications", getNotifications);
+router.get("/:id/notifications/filter", getNotificationsByStatus);
+router.get("/:id/notifications/:notificationId", getNotificationById);
+router.post("/:id/notifications", addNotification);
+router.put("/:id/notifications/:notificationId", updateNotification);
+router.delete("/:id/notifications/:notificationId", deleteNotification);
+router.delete("/:id/notifications", clearNotifications);
 
 // 📅 Leave Routes
 router.get("/:employeeId/leaves", getEmployeeLeaves);
 router.post("/:employeeId/leaves", addLeave);
 router.put("/:employeeId/leaves/:leaveId", updateLeave);
 router.delete("/:employeeId/leaves/:leaveId", deleteLeave);
-router.get("/:employeeId/leaves/:leaveId",getEmployeeLeaveById);
-
+router.get("/:employeeId/leaves/:leaveId", getEmployeeLeaveById);
 
 // ⏰ Attendance Routes
 router.get("/:employeeId/attendances", getEmployeeAttendances);

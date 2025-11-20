@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import userRoutes from "./routes/userRoutes.js";
 import employeeRoutes from "./routes/employeeRoutes.js";
 import { connectDB } from "./config/db.js";
-
+import payrollRoutes from './routes/payrollroute.js'; // Yeni əlavə
 dotenv.config();
 
 const app = express();
@@ -26,6 +26,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/employees", employeeRoutes);
+app.use('/api/payroll', payrollRoutes); // Yeni əlavə
+
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

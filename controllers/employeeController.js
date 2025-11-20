@@ -1,5 +1,6 @@
 import Employee from "../models/Employee.js";
 import mongoose from "mongoose";
+import taxCalculationService from "../services/taxCalculationService.js";
 
 // ✅ Yeni işçi yarat
 export const createEmployee = async (req, res) => {
@@ -11,6 +12,18 @@ export const createEmployee = async (req, res) => {
       employeeData.filename = req.file.originalname;
       employeeData.contentType = req.file.mimetype;
       employeeData.data = req.file.buffer;
+    }
+
+    // Vergi hesablamalarını avtomatik et
+    if (employeeData.gross && employeeData.employeeType) {
+      const taxResult = taxCalculationService.calculateAllTaxes(
+        employeeData.gross, 
+        employeeData.employeeType
+      );
+      
+      employeeData.tax = taxResult.employee.taxes.incomeTax;
+      employeeData.social_pay = taxResult.employee.taxes.socialInsurance;
+      employeeData.Net_salary = taxResult.employee.netSalary;
     }
 
     const employee = await Employee.create(employeeData);
@@ -91,34 +104,36 @@ export const deleteEmployee = async (req, res) => {
   }
 };
 
-// ✅ İşçinin şəklini/getir
-export const getEmployeeImage = async (req, res) => {
+// ===================== 💰 YENİ VERGİ VƏ ÖDƏNİŞ FUNKSİYALARI =====================
+
+// ✅ İşçi növünü yenilə (dövlət/özəl)
+export const updateEmployeeType = async (req, res) => {
   try {
-    const employee = await Employee.findById(req.params.id);
-    if (!employee || !employee.data) {
-      return res.status(404).json({ message: "Şəkil tapılmadı" });
+    const { employeeType } = req.body;
+
+    if (!['state', 'private'].includes(employeeType)) {
+      return res.status(400).json({ message: "İşçi növü yalnız 'state' və ya 'private' ola bilər" });
     }
-
-    res.set("Content-Type", employee.contentType);
-    res.send(employee.data);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// ✅ Maaş məlumatlarını yenilə
-export const updateSalary = async (req, res) => {
-  try {
-    const { gross, tax, social_pay, Net_salary, salary_status } = req.body;
 
     const employee = await Employee.findByIdAndUpdate(
       req.params.id,
-      { gross, tax, social_pay, Net_salary, salary_status },
+      { employeeType },
       { new: true, runValidators: true }
     ).select("-data");
 
     if (!employee) {
       return res.status(404).json({ message: "İşçi tapılmadı" });
+    }
+
+    // İşçi növü dəyişdikdə vergiləri yenidən hesabla
+    if (employee.gross > 0) {
+      const taxResult = taxCalculationService.calculateAllTaxes(employee.gross, employeeType);
+      
+      await Employee.findByIdAndUpdate(req.params.id, {
+        tax: taxResult.employee.taxes.incomeTax,
+        social_pay: taxResult.employee.taxes.socialInsurance,
+        Net_salary: taxResult.employee.netSalary
+      });
     }
 
     res.json(employee);
@@ -127,7 +142,185 @@ export const updateSalary = async (req, res) => {
   }
 };
 
-// ✅ Notification əlavə et
+// ✅ İşçi ödənişlərini gətir
+export const getEmployeePayments = async (req, res) => {
+  try {
+    const employee = await Employee.findById(req.params.id)
+      .select("paymentHistory taxPaymentHistory lastPaymentDate nextPaymentDate");
+    
+    if (!employee) {
+      return res.status(404).json({ message: "İşçi tapılmadı" });
+    }
+
+    res.json({
+      payment_history: employee.paymentHistory,
+      tax_payment_history: employee.taxPaymentHistory,
+      last_payment_date: employee.lastPaymentDate,
+      next_payment_date: employee.nextPaymentDate
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ İşçi ödənişi əlavə et
+export const addEmployeePayment = async (req, res) => {
+  try {
+    const { 
+      paymentType, 
+      amount, 
+      paymentDate, 
+      forMonth, 
+      description, 
+      taxDetails 
+    } = req.body;
+
+    const employee = await Employee.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({ message: "İşçi tapılmadı" });
+    }
+
+    const newPayment = {
+      paymentType,
+      amount,
+      paymentDate: new Date(paymentDate),
+      forMonth: new Date(forMonth),
+      description,
+      taxDetails,
+      status: 'completed'
+    };
+
+    employee.paymentHistory.push(newPayment);
+    employee.lastPaymentDate = new Date(paymentDate);
+    
+    // Növbəti ödəniş tarixini hesabla (1 ay sonra)
+    const nextPayment = new Date(paymentDate);
+    nextPayment.setMonth(nextPayment.getMonth() + 1);
+    employee.nextPaymentDate = nextPayment;
+
+    // Maaş statusunu yenilə
+    employee.salary_status = 'paid';
+
+    await employee.save();
+
+    res.status(201).json({
+      message: "Ödəniş uğurla əlavə edildi",
+      payment: newPayment,
+      last_payment_date: employee.lastPaymentDate,
+      next_payment_date: employee.nextPaymentDate
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ İşçi vergi məlumatlarını yenilə
+export const updateEmployeeTaxData = async (req, res) => {
+  try {
+    const { gross, employeeType } = req.body;
+
+    const employee = await Employee.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({ message: "İşçi tapılmadı" });
+    }
+
+    // Vergiləri hesabla
+    const taxResult = taxCalculationService.calculateAllTaxes(gross, employeeType || employee.employeeType);
+
+    const updatedEmployee = await Employee.findByIdAndUpdate(
+      req.params.id,
+      {
+        gross,
+        employeeType: employeeType || employee.employeeType,
+        tax: taxResult.employee.taxes.incomeTax,
+        social_pay: taxResult.employee.taxes.socialInsurance,
+        Net_salary: taxResult.employee.netSalary,
+        salary_status: 'pending'
+      },
+      { new: true, runValidators: true }
+    ).select("-data");
+
+    res.json({
+      employee: updatedEmployee,
+      tax_calculation: taxResult
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ İşçi vergilərini hesabla
+export const calculateEmployeeTaxes = async (req, res) => {
+  try {
+    const { gross, employeeType } = req.body;
+
+    if (!gross || gross < 400) {
+      return res.status(400).json({ message: "Əməkhaqqı 400 AZN-dən aşağı ola bilməz" });
+    }
+
+    const taxResult = taxCalculationService.calculateAllTaxes(
+      gross, 
+      employeeType || 'private'
+    );
+
+    res.json({
+      success: true,
+      data: taxResult
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+// ===================== 💰 MÖVCUD MAAŞ FUNKSİYASI (YENİLƏNİB) =====================
+
+// ✅ Maaş məlumatlarını yenilə
+export const updateSalary = async (req, res) => {
+  try {
+    const { gross, employeeType, salary_status } = req.body;
+
+    const employee = await Employee.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({ message: "İşçi tapılmadı" });
+    }
+
+    let updateData = { salary_status };
+
+    // Gross maaş verilibsə, vergiləri avtomatik hesabla
+    if (gross) {
+      const taxResult = taxCalculationService.calculateAllTaxes(
+        gross, 
+        employeeType || employee.employeeType
+      );
+
+      updateData.gross = gross;
+      updateData.tax = taxResult.employee.taxes.incomeTax;
+      updateData.social_pay = taxResult.employee.taxes.socialInsurance;
+      updateData.Net_salary = taxResult.employee.netSalary;
+    }
+
+    // İşçi növü dəyişibsə
+    if (employeeType) {
+      updateData.employeeType = employeeType;
+    }
+
+    const updatedEmployee = await Employee.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    ).select("-data");
+
+    res.json(updatedEmployee);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ===================== 🔔 MÖVCUD NOTIFICATION FUNKSİYALARI =====================
+
 // ✅ Bütün notificationları getir
 export const getNotifications = async (req, res) => {
   try {
@@ -152,7 +345,6 @@ export const getNotificationById = async (req, res) => {
       return res.status(404).json({ message: "İşçi tapılmadı" });
     }
 
-    // Adi JavaScript find metodu ilə axtarırıq
     const notification = employee.Recent_Notifications.find(
       notif => notif._id == notificationId
     );
@@ -167,13 +359,11 @@ export const getNotificationById = async (req, res) => {
   }
 };
 
-// ✅ Notification əlavə et (sizin artıq var, ampa yenə yazıram)
-// ✅ Notification əlavə et - DÜZƏLDİLDİ
+// ✅ Notification əlavə et
 export const addNotification = async (req, res) => {
   try {
     const { message, type = "info" } = req.body;
 
-    // Validation
     if (!message) {
       return res.status(400).json({ message: "Message sahəsi mütləqdir" });
     }
@@ -190,11 +380,10 @@ export const addNotification = async (req, res) => {
       return res.status(404).json({ message: "İşçi tapılmadı" });
     }
 
-    // DÜZƏLDİLMİŞ Notification object
     const newNotification = {
       _id: new mongoose.Types.ObjectId(),
-      message: message, // message birbaşa string kimi
-      type: type,       // type birbaşa string kimi
+      message: message,
+      type: type,
       isRead: false,
       createdAt: new Date()
     };
@@ -208,7 +397,7 @@ export const addNotification = async (req, res) => {
   }
 };
 
-// ✅ Notificationu yenilə (məsələn, oxundu kimi qeyd etmək)
+// ✅ Notificationu yenilə
 export const updateNotification = async (req, res) => {
   try {
     const { id, notificationId } = req.params;
@@ -219,16 +408,14 @@ export const updateNotification = async (req, res) => {
       return res.status(404).json({ message: "İşçi tapılmadı" });
     }
 
-    // Adi JavaScript find metodu ilə axtarırıq
     const notificationIndex = employee.Recent_Notifications.findIndex(
-      notif => notif._id== notificationId
+      notif => notif._id == notificationId
     );
 
     if (notificationIndex === -1) {
       return res.status(404).json({ message: "Bildiriş tapılmadı" });
     }
 
-    // Notificationu yeniləyirik
     employee.Recent_Notifications[notificationIndex] = {
       ...employee.Recent_Notifications[notificationIndex],
       ...updateData
@@ -242,7 +429,7 @@ export const updateNotification = async (req, res) => {
   }
 };
 
-// ✅ Xüsusi notificationu sil - DÜZƏLDİLDİ
+// ✅ Xüsusi notificationu sil
 export const deleteNotification = async (req, res) => {
   try {
     const { id, notificationId } = req.params;
@@ -252,9 +439,8 @@ export const deleteNotification = async (req, res) => {
       return res.status(404).json({ message: "İşçi tapılmadı" });
     }
 
-    // Adi JavaScript filter metodu ilə silirik
     employee.Recent_Notifications = employee.Recent_Notifications.filter(
-      notif => notif._id== notificationId
+      notif => notif._id == notificationId
     );
 
     await employee.save();
@@ -289,11 +475,11 @@ export const clearNotifications = async (req, res) => {
   }
 };
 
-// ✅ Notificationları statusa görə filter et (oxunub/oxunmayıb)
+// ✅ Notificationları statusa görə filter et
 export const getNotificationsByStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.query; // 'read' və ya 'unread'
+    const { status } = req.query;
 
     const employee = await Employee.findById(id);
     if (!employee) {
@@ -315,7 +501,7 @@ export const getNotificationsByStatus = async (req, res) => {
   }
 };
 
-// ===================== 📅 LEAVE CONTROLLERS =====================
+// ===================== 📅 MÖVCUD LEAVE FUNKSİYALARI =====================
 
 // ✅ İşçiyə məzuniyyət əlavə et
 export const addLeave = async (req, res) => {
@@ -371,7 +557,7 @@ export const deleteLeave = async (req, res) => {
       return res.status(404).json({ message: "İşçi tapılmadı" });
     }
 
-    employee.leaves.get(leaveId);
+    employee.leaves.pull(leaveId);
     await employee.save();
 
     res.json({ message: "Məzuniyyət silindi", leaves: employee.leaves });
@@ -393,6 +579,7 @@ export const getEmployeeLeaves = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 export const getEmployeeLeaveById = async (req, res) => {
   try {
     const { employeeId, leaveId } = req.params;
@@ -402,12 +589,10 @@ export const getEmployeeLeaveById = async (req, res) => {
       return res.status(404).json({ message: "İşçi tapılmadı" });
     }
 
-    // `leaves` bir array olduğu için `find` kullanıyoruz.
     const leave = employee.leaves.find(leave => leave._id.toString() === leaveId);
 
     if (!leave) {
       return res.status(404).json({ message: "Məzuniyyət tapılmadı" });
-     
     }
 
     res.json(leave);
@@ -416,8 +601,7 @@ export const getEmployeeLeaveById = async (req, res) => {
   }
 };
 
-
-// ===================== ⏰ ATTENDANCE CONTROLLERS =====================
+// ===================== ⏰ MÖVCUD ATTENDANCE FUNKSİYALARI =====================
 
 // ✅ İşçiyə iş girişi əlavə et
 export const addAttendance = async (req, res) => {
@@ -481,6 +665,7 @@ export const deleteAttendance = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 export const getAttendanceById = async (req, res) => {
   try {
     const { attendanceId } = req.params;
@@ -490,13 +675,11 @@ export const getAttendanceById = async (req, res) => {
       return res.status(404).json({ message: "İşçi tapılmadı" });
     }
 
-    const attendance=employee.attendances.find(attendance=>attendance._id.toString()===attendanceId);
-  if (!attendance) {
+    const attendance = employee.attendances.find(attendance => attendance._id.toString() === attendanceId);
+    if (!attendance) {
       return res.status(404).json({ message: "Məzuniyyət tapılmadı" });
-     
     }
-    res.json(attendance)
-
+    res.json(attendance);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -515,6 +698,8 @@ export const getEmployeeAttendances = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// ===================== 🏢 MÖVCUD ŞİRKƏT FUNKSİYALARI =====================
 
 // ✅ Şirkətə görə işçiləri getir
 export const getEmployeesByCompany = async (req, res) => {
@@ -539,6 +724,21 @@ export const getEmployeesByStatus = async (req, res) => {
 
     const employees = await Employee.find(filter).select("-data");
     res.json(employees);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ İşçinin şəklini/getir
+export const getEmployeeImage = async (req, res) => {
+  try {
+    const employee = await Employee.findById(req.params.id);
+    if (!employee || !employee.data) {
+      return res.status(404).json({ message: "Şəkil tapılmadı" });
+    }
+
+    res.set("Content-Type", employee.contentType);
+    res.send(employee.data);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

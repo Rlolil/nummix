@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import taxCalculationService from "../services/taxCalculationService.js";
 
 // ✅ Yeni istifadəçi qeydiyyatı
 export const registerUser = async (req, res) => {
@@ -113,6 +114,180 @@ export const deleteUser = async (req, res) => {
   }
 };
 
+// ===================== 💰 YENİ VERGİ VƏ ÖDƏNİŞ FUNKSİYALARI =====================
+
+// ✅ Əməkhaqqı fondu yenilə
+export const updateSalaryFund = async (req, res) => {
+  try {
+    const { month, amount } = req.body;
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    if (!user.monthly_total_salary_fund[month]) {
+      return res.status(400).json({ message: "Yanlış ay adı" });
+    }
+
+    // Əməkhaqqı fondu yenilə
+    user.monthly_total_salary_fund[month] = amount;
+
+    // Şirkət vergilərini avtomatik hesabla
+    const companyTaxes = taxCalculationService.calculateStateEmployerTaxes(amount);
+    user.company_taxes.dsmf[month] = companyTaxes.employerTaxes.dsmf;
+    user.company_taxes.ish[month] = companyTaxes.employerTaxes.ish;
+    user.company_taxes.its[month] = companyTaxes.employerTaxes.its;
+    user.company_taxes.total_company_taxes[month] = companyTaxes.totalEmployerTaxes;
+
+    // Cari ay ümumi məlumatları yenilə
+    const currentMonth = new Date().toLocaleString('en-US', { month: 'long' });
+    if (month === currentMonth) {
+      user.current_month_total.salary_fund = amount;
+      user.current_month_total.company_taxes = companyTaxes.totalEmployerTaxes;
+    }
+
+    await user.save();
+
+    res.json({
+      salary_fund: user.monthly_total_salary_fund[month],
+      company_taxes: {
+        dsmf: user.company_taxes.dsmf[month],
+        ish: user.company_taxes.ish[month],
+        its: user.company_taxes.its[month],
+        total: user.company_taxes.total_company_taxes[month]
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ Şirkət vergilərini yenilə
+export const updateCompanyTaxes = async (req, res) => {
+  try {
+    const { month, dsmf, ish, its } = req.body;
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    if (!user.company_taxes.dsmf[month]) {
+      return res.status(400).json({ message: "Yanlış ay adı" });
+    }
+
+    // Vergiləri yenilə
+    user.company_taxes.dsmf[month] = dsmf || user.company_taxes.dsmf[month];
+    user.company_taxes.ish[month] = ish || user.company_taxes.ish[month];
+    user.company_taxes.its[month] = its || user.company_taxes.its[month];
+    
+    // Ümumi vergi hesabla
+    user.company_taxes.total_company_taxes[month] = 
+      user.company_taxes.dsmf[month] + 
+      user.company_taxes.ish[month] + 
+      user.company_taxes.its[month];
+
+    await user.save();
+
+    res.json(user.company_taxes);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ İşçi axını məlumatlarını gətir
+export const getEmployeeFlowData = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("monthly_employee_flow employee_flow_history");
+    if (!user) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    res.json({
+      monthly_stats: user.monthly_employee_flow,
+      history: user.employee_flow_history
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ İşçi axını məlumatlarını yenilə
+export const updateEmployeeFlowData = async (req, res) => {
+  try {
+    const { month, type, count, employeeData } = req.body;
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    if (month && type) {
+      // Aylıq statistikaları yenilə
+      if (type === 'new_hires') {
+        user.monthly_employee_flow[month].new_hires += count;
+        user.monthly_employee_flow[month].net_change += count;
+      } else if (type === 'terminations') {
+        user.monthly_employee_flow[month].terminations += count;
+        user.monthly_employee_flow[month].net_change -= count;
+      } else if (type === 'resignations') {
+        user.monthly_employee_flow[month].resignations += count;
+        user.monthly_employee_flow[month].net_change -= count;
+      }
+    }
+
+    if (employeeData) {
+      // Tarixçəyə yeni qeyd əlavə et
+      user.employee_flow_history.push(employeeData);
+    }
+
+    await user.save();
+
+    res.json({
+      monthly_stats: user.monthly_employee_flow,
+      history: user.employee_flow_history
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ Ödəniş ümumi baxışını gətir
+export const getPaymentOverview = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("employee_payments employer_payments current_month_total");
+    if (!user) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    // Ödəniş statistikalarını hesabla
+    const totalEmployeePayments = user.employee_payments.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalEmployerPayments = user.employer_payments.reduce((sum, payment) => sum + payment.amount, 0);
+    const completedPayments = user.employee_payments.filter(p => p.status === 'completed').length;
+    const pendingPayments = user.employee_payments.filter(p => p.status === 'pending').length;
+
+    res.json({
+      summary: {
+        total_employee_payments: totalEmployeePayments,
+        total_employer_payments: totalEmployerPayments,
+        total_payments: totalEmployeePayments + totalEmployerPayments,
+        completed_payments: completedPayments,
+        pending_payments: pendingPayments,
+        payment_success_rate: user.employee_payments.length > 0 ? 
+          (completedPayments / user.employee_payments.length * 100).toFixed(2) : 0
+      },
+      current_month: user.current_month_total,
+      recent_employee_payments: user.employee_payments.slice(-5).reverse(),
+      recent_employer_payments: user.employer_payments.slice(-5).reverse()
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ===================== 📅 MÖVCUD TƏQVİM FUNKSİYALARI =====================
+
 // ✅ Təqvim günü əlavə et
 export const addCalendarDay = async (req, res) => {
   try {
@@ -140,6 +315,7 @@ export const addCalendarDay = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 export const getAllCalendar = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -148,6 +324,7 @@ export const getAllCalendar = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 export const getCalendarDayById = async (req, res) => {
   try {
     const { id, dayId } = req.params;
@@ -167,7 +344,6 @@ export const getCalendarDayById = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 // ✅ Təqvim gününü yenilə
 export const updateCalendarDay = async (req, res) => {
@@ -212,6 +388,8 @@ export const deleteCalendarDay = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// ===================== 🎯 MÖVCUD TƏDBİR FUNKSİYALARI =====================
 
 // ✅ Tədbir əlavə et
 export const addEvent = async (req, res) => {
@@ -291,6 +469,7 @@ export const deleteEvent = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 export const getEventById = async (req, res) => {
   try {
     const { id, dayId, eventId } = req.params;
@@ -315,6 +494,7 @@ export const getEventById = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 export const getAllEvents = async (req, res) => {
   try {
     const { id, dayId, eventId } = req.params;
@@ -335,6 +515,7 @@ export const getAllEvents = async (req, res) => {
   }
 };
 
+// ===================== 💰 MÖVCUD MALİYYƏ FUNKSİYALARI =====================
 
 // ✅ Maliyyə məlumatlarını yenilə
 export const updateFinancialData = async (req, res) => {
@@ -376,6 +557,263 @@ export const updateMonthlyData = async (req, res) => {
     }
 
     res.json(user[dataType]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+import AccountingService from "../services/accountingService.js";
+
+// ✅ MÜHASİBAT YAZILIŞI ƏLAVƏ ET
+export const addAccountingEntry = async (req, res) => {
+  try {
+    const { accountCode, amount, type, description, documentNumber, date } = req.body;
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    // Hesab məlumatlarını al
+    const accountInfo = AccountingService.getAccountInfo(accountCode);
+    if (!accountInfo) {
+      return res.status(400).json({ message: "Yanlış hesab kodu" });
+    }
+
+    // Validation
+    const validation = AccountingService.validateAccountingEntry({
+      accountCode, amount, type, documentNumber
+    });
+    
+    if (!validation.isValid) {
+      return res.status(400).json({ 
+        message: "Validation xətası", 
+        errors: validation.errors 
+      });
+    }
+
+    const newEntry = {
+      accountCode,
+      accountName: accountInfo.name,
+      amount,
+      type,
+      description,
+      documentNumber,
+      date: date || new Date(),
+      status: 'posted'
+    };
+
+    user.accountingEntries.push(newEntry);
+    
+    // Aylıq statistikaları yenilə
+    user.updateMonthlyAccounting(newEntry);
+    
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      data: newEntry,
+      message: "Mühasibat yazılışı uğurla əlavə edildi"
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ BÜTÜN MÜHASİBAT YAZILIŞLARINI GƏTİR
+export const getAccountingEntries = async (req, res) => {
+  try {
+    const { startDate, endDate, accountCode, type } = req.query;
+    
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    let entries = user.accountingEntries;
+
+    // Filterləmə
+    if (startDate) {
+      entries = entries.filter(entry => new Date(entry.date) >= new Date(startDate));
+    }
+    if (endDate) {
+      entries = entries.filter(entry => new Date(entry.date) <= new Date(endDate));
+    }
+    if (accountCode) {
+      entries = entries.filter(entry => entry.accountCode === accountCode);
+    }
+    if (type) {
+      entries = entries.filter(entry => entry.type === type);
+    }
+
+    // Sıralama (ən yeni üstə)
+    entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    res.json({
+      success: true,
+      data: entries,
+      count: entries.length
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ MÜHASİBAT BALANSLARINI GƏTİR
+export const getAccountingBalances = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    // Balansları yenilə
+    user.updateAccountingBalances();
+    await user.save();
+
+    const balances = AccountingService.calculateAllBalances(user.accountingEntries);
+
+    res.json({
+      success: true,
+      data: {
+        balances: balances.balances,
+        summary: balances.summary,
+        lastUpdated: new Date()
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ HESAB KODU ÜZRƏ BALANS GƏTİR
+export const getAccountBalance = async (req, res) => {
+  try {
+    const { accountCode } = req.params;
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    const accountInfo = AccountingService.getAccountInfo(accountCode);
+    if (!accountInfo) {
+      return res.status(404).json({ message: "Hesab kodu tapılmadı" });
+    }
+
+    const balance = AccountingService.calculateAccountBalance(user.accountingEntries, accountCode);
+
+    res.json({
+      success: true,
+      data: balance
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ MÜHASİBAT HESABATI YARAT
+export const generateAccountingReport = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    const report = AccountingService.generateAccountingReport(
+      user.accountingEntries, 
+      startDate, 
+      endDate
+    );
+
+    res.json({
+      success: true,
+      data: report
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ NÜMUNƏ MÜHASİBAT ƏMƏLİYYATI YARAT
+export const createSampleAccountingTransaction = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    const sampleEntries = AccountingService.createSampleTransaction();
+    
+    sampleEntries.forEach(entry => {
+      user.accountingEntries.push(entry);
+      user.updateMonthlyAccounting(entry);
+    });
+
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      data: sampleEntries,
+      message: "Nümunə mühasibat əməliyyatı uğurla yaradıldı"
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ MÜHASİBAT YAZILIŞINI SİL
+export const deleteAccountingEntry = async (req, res) => {
+  try {
+    const { entryId } = req.params;
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    const entryIndex = user.accountingEntries.findIndex(entry => entry._id.toString() === entryId);
+    if (entryIndex === -1) {
+      return res.status(404).json({ message: "Yazılış tapılmadı" });
+    }
+
+    user.accountingEntries.splice(entryIndex, 1);
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Mühasibat yazılışı uğurla silindi"
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ MÜHASİBAT YAZILIŞINI YENİLƏ
+export const updateAccountingEntry = async (req, res) => {
+  try {
+    const { entryId } = req.params;
+    const updateData = req.body;
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    const entry = user.accountingEntries.id(entryId);
+    if (!entry) {
+      return res.status(404).json({ message: "Yazılış tapılmadı" });
+    }
+
+    Object.assign(entry, updateData);
+    await user.save();
+
+    res.json({
+      success: true,
+      data: entry,
+      message: "Mühasibat yazılışı uğurla yeniləndi"
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
