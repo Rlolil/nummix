@@ -33,6 +33,7 @@ export const createEmployee = async (req, res) => {
   }
 };
 
+
 // ✅ Bütün işçiləri getir
 export const getAllEmployees = async (req, res) => {
   try {
@@ -49,7 +50,47 @@ export const getAllEmployees = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// ✅ FAYLI YÜKLƏ (download)
+export const downloadEmployeeFile = async (req, res) => {
+  try {
+    const employee = await Employee.findById(req.params.id);
+    
+    if (!employee || !employee.data) {
+      return res.status(404).json({ message: "Fayl tapılmadı" });
+    }
 
+    // Fayl məlumatlarını set et
+    res.set({
+      "Content-Type": employee.contentType,
+      "Content-Disposition": `attachment; filename="${employee.originalName}"`,
+      "Content-Length": employee.fileSize
+    });
+    
+    // Binary datanı göndər
+    res.send(employee.data);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ FAYLI GÖSTƏR (browserdə - şəkillər, pdf-lər üçün)
+export const viewEmployeeFile = async (req, res) => {
+  try {
+    const employee = await Employee.findById(req.params.id);
+    
+    if (!employee || !employee.data) {
+      return res.status(404).json({ message: "Fayl tapılmadı" });
+    }
+
+    // Content-Type-i set et
+    res.set("Content-Type", employee.contentType);
+    
+    // Binary datanı göndər
+    res.send(employee.data);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 // ✅ ID ilə işçi getir
 export const getEmployeeById = async (req, res) => {
   try {

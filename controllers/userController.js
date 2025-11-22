@@ -1,6 +1,6 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
-import taxCalculationService from "../services/taxCalculationService.js";
+import TaxCalculationService from "../services/taxCalculationService.js";
 
 // ✅ Yeni istifadəçi qeydiyyatı
 export const registerUser = async (req, res) => {
@@ -117,52 +117,98 @@ export const deleteUser = async (req, res) => {
 // ===================== 💰 YENİ VERGİ VƏ ÖDƏNİŞ FUNKSİYALARI =====================
 
 // ✅ Əməkhaqqı fondu yenilə
+
 export const updateSalaryFund = async (req, res) => {
   try {
     const { month, amount } = req.body;
 
+    console.log("🟡 Received month:", month, "Amount:", amount);
+
+    // ✅ User ID yoxlanışı
+    if (!req.params.id) {
+      return res.status(400).json({ message: "İstifadəçi ID-si təqdim edilməyib" });
+    }
+
     const user = await User.findById(req.params.id);
     if (!user) {
+      console.log("🔴 User not found with ID:", req.params.id);
       return res.status(404).json({ message: "İstifadəçi tapılmadı" });
     }
 
-    if (!user.monthly_total_salary_fund[month]) {
-      return res.status(400).json({ message: "Yanlış ay adı" });
+    // ✅ AY YOXLANIŞI
+    const validMonths = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    const normalizedMonth = validMonths.find(m => 
+      m.toLowerCase() === month.toLowerCase()
+    );
+
+    if (!normalizedMonth) {
+      return res.status(400).json({ 
+        message: "Yanlış ay adı",
+        availableMonths: validMonths,
+        receivedMonth: month
+      });
+    }
+
+    // ✅ TAXCALCULATION SERVICE İSTİFADƏSİ
+    let companyTaxes;
+    try {
+      companyTaxes = TaxCalculationService.calculateEmployerTaxes(amount);
+      console.log("🟢 Tax calculation successful:", companyTaxes);
+    } catch (taxError) {
+      console.error("🔴 Tax calculation error:", taxError);
+      return res.status(500).json({ 
+        message: "Vergi hesablanmasında xəta",
+        error: taxError.message 
+      });
+    }
+
+    // Əgər ay mövcud deyilsə, avtomatik yarat
+    if (!user.monthly_total_salary_fund[normalizedMonth]) {
+      user.monthly_total_salary_fund[normalizedMonth] = 0;
     }
 
     // Əməkhaqqı fondu yenilə
-    user.monthly_total_salary_fund[month] = amount;
+    user.monthly_total_salary_fund[normalizedMonth] = amount;
 
     // Şirkət vergilərini avtomatik hesabla
-    const companyTaxes = taxCalculationService.calculateStateEmployerTaxes(amount);
-    user.company_taxes.dsmf[month] = companyTaxes.employerTaxes.dsmf;
-    user.company_taxes.ish[month] = companyTaxes.employerTaxes.ish;
-    user.company_taxes.its[month] = companyTaxes.employerTaxes.its;
-    user.company_taxes.total_company_taxes[month] = companyTaxes.totalEmployerTaxes;
+    user.company_taxes.dsmf[normalizedMonth] = companyTaxes.employerTaxes.dsmf;
+    user.company_taxes.ish[normalizedMonth] = companyTaxes.employerTaxes.ish;
+    user.company_taxes.its[normalizedMonth] = companyTaxes.employerTaxes.its;
+    user.company_taxes.total_company_taxes[normalizedMonth] = companyTaxes.totalEmployerTaxes;
 
     // Cari ay ümumi məlumatları yenilə
     const currentMonth = new Date().toLocaleString('en-US', { month: 'long' });
-    if (month === currentMonth) {
+    if (normalizedMonth === currentMonth) {
       user.current_month_total.salary_fund = amount;
       user.current_month_total.company_taxes = companyTaxes.totalEmployerTaxes;
     }
 
     await user.save();
 
+    console.log("✅ User saved successfully");
+
     res.json({
-      salary_fund: user.monthly_total_salary_fund[month],
+      success: true,
+      month: normalizedMonth,
+      salary_fund: user.monthly_total_salary_fund[normalizedMonth],
       company_taxes: {
-        dsmf: user.company_taxes.dsmf[month],
-        ish: user.company_taxes.ish[month],
-        its: user.company_taxes.its[month],
-        total: user.company_taxes.total_company_taxes[month]
-      }
+        dsmf: user.company_taxes.dsmf[normalizedMonth],
+        ish: user.company_taxes.ish[normalizedMonth],
+        its: user.company_taxes.its[normalizedMonth],
+        total: user.company_taxes.total_company_taxes[normalizedMonth]
+      },
+      message: "Əməkhaqqı fondu uğurla yeniləndi"
     });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("🔴 Salary fund update error:", error);
+    res.status(500).json({ 
+      message: error.message
+    });
   }
 };
-
 // ✅ Şirkət vergilərini yenilə
 export const updateCompanyTaxes = async (req, res) => {
   try {

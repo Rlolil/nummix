@@ -1,5 +1,23 @@
 class TaxCalculationService {
   
+  // ===================== 🏢 ÜMUMİ İŞƏGÖTÜRƏN VERGİLƏRİ (SADƏ VERSİYA) =====================
+  calculateEmployerTaxes(salaryFund) {
+    const dsmf = salaryFund * 0.22;  // 22%
+    const ish = salaryFund * 0.005;  // 0.5%
+    
+    // İTŞ hesablanması
+    let its = salaryFund <= 8000 ? salaryFund * 0.02 : salaryFund * 0.005;
+
+    return {
+      employerTaxes: { 
+        dsmf: Number(dsmf.toFixed(2)), 
+        ish: Number(ish.toFixed(2)), 
+        its: Number(its.toFixed(2)) 
+      },
+      totalEmployerTaxes: Number((dsmf + ish + its).toFixed(2))
+    };
+  }
+
   // ===================== 🏛️ DÖVLƏT İŞÇİSİ ÜÇÜN VERGİLƏR =====================
   calculateStateEmployeeTaxes(salary) {
     if (salary < 400) {

@@ -77,6 +77,12 @@ const employeeSchema = new mongoose.Schema({
   idSerialNumber: { type: String, required: true },
   phone: { type: String, required: true },
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  filename: String,           // Faylın orijinal adı: "document.pdf"
+  contentType: String,        // MIME type: "application/pdf"
+  data: Buffer,              // Faylın binary məlumatı
+  fileSize: Number,    
+    originalName: String,      // Orijinal fayl adı
+
   
   // ===================== 💰 MAAŞ NÖVÜ VƏ ÖDƏNİŞ MƏLUMATLARI =====================
   // İşçi növü (dövlət və ya özəl) - vergi hesablamaları üçün ÇOX VACİB

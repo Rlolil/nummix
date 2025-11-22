@@ -119,11 +119,14 @@ const assetCategorySchema = new mongoose.Schema({
   }
 });
 
+// User modelində - YALNIZ assetSchema-nı bu şəkildə dəyişin:
+
 const assetSchema = new mongoose.Schema({
   inventoryNumber: {
     type: String,
-    required: true,
-    unique: true,
+    default: function() {
+      return `INV_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    },
     trim: true
   },
   name: {
@@ -181,6 +184,32 @@ const assetSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  
+  // ✅ YENİ: MULTER BUFFER ÜÇÜN SƏNƏD SAHƏSİ
+  document: {
+    originalName: {
+      type: String,
+      required: false
+    },
+    mimeType: {
+      type: String,
+      required: false
+    },
+    fileSize: {
+      type: Number,
+      required: false
+    },
+    // ✅ BUFFER DATA - Base64 formatında saxlayırıq
+    bufferData: {
+      type: String, // Buffer'ı Base64 string kimi saxlayırıq
+      required: false
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  
   createdAt: {
     type: Date,
     default: Date.now
@@ -190,7 +219,7 @@ const assetSchema = new mongoose.Schema({
     default: Date.now
   }
 });
-
+// Excel və PDF report schema-larında da buffer əlavə edə bilərsiniz (seçimlik):
 const excelReportSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -210,9 +239,14 @@ const excelReportSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // ✅ SEÇİMLİ: Buffer üçün əlavə edə bilərsiniz
+  bufferData: {
+    type: String, // Base64 string
+    required: false
+  },
   filePath: {
     type: String,
-    required: true
+    required: false // ✅ Artıq tələb olunmur
   },
   fileSize: {
     type: Number,
@@ -232,16 +266,16 @@ const excelReportSchema = new mongoose.Schema({
     currentValue: Number,
     amortization: Number,
     status: String,
-    amortizationPercentage: Number // ✅ ƏLAVƏ EDİLDİ
+    amortizationPercentage: Number
   }],
-  summary: { // ✅ ƏLAVƏ EDİLDİ
+  summary: {
     totalAssets: Number,
     totalInitialValue: Number,
     totalCurrentValue: Number,
     totalAmortization: Number,
     averageAmortizationPercentage: Number
   },
-  filters: { // ✅ ƏLAVƏ EDİLDİ
+  filters: {
     dateFrom: Date,
     dateTo: Date,
     categories: [String],
@@ -250,6 +284,7 @@ const excelReportSchema = new mongoose.Schema({
   }
 });
 
+// Eyni dəyişikliyi pdfReportSchema üçün də edə bilərsiniz
 const pdfReportSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -269,43 +304,21 @@ const pdfReportSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // ✅ SEÇİMLİ: Buffer üçün
+  bufferData: {
+    type: String,
+    required: false
+  },
   filePath: {
     type: String,
-    required: true
+    required: false // ✅ Artıq tələb olunmur
   },
   fileSize: {
     type: Number,
     default: 0
   },
-  generatedAt: {
-    type: Date,
-    default: Date.now
-  },
-  data: [{
-    inventoryNumber: String,
-    name: String,
-    category: String,
-    initialValue: Number,
-    currentValue: Number,
-    amortization: Number,
-    amortizationPercentage: Number
-  }],
-  summary: { // ✅ ƏLAVƏ EDİLDİ
-    totalAssets: Number,
-    totalInitialValue: Number,
-    totalCurrentValue: Number,
-    totalAmortization: Number,
-    averageAmortizationPercentage: Number
-  },
-  filters: { // ✅ ƏLAVƏ EDİLDİ
-    dateFrom: Date,
-    dateTo: Date,
-    categories: [String],
-    locations: [String],
-    status: String
-  }
+  // ... qalan sahələr eyni qalır
 });
-
 
 const categoryReportSchema = new mongoose.Schema({
   title: {
@@ -561,7 +574,6 @@ const userSchema = new mongoose.Schema(
     Obligations_assets: { type: Number },
     expected_taxes: { type: Number },
     vacation: { type: Number },
-    Attendance: { type: Number },
     position: { type: Array },
     taxes: { type: String },
     Bonuses: { type: String },
@@ -834,14 +846,7 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-// ===================== 📊 MÜHASİBAT MIDDLEWARE VƏ METODLARI =====================
-userSchema.pre('save', function(next) {
-  if (this.isModified('accountingEntries')) {
-    this.updateAccountingBalances();
-  }
-  next();
-});
-
+// ===================== 📊 MÜHASİBAT METODLARI =====================
 userSchema.methods.updateAccountingBalances = function() {
   const balances = {
     "543": { totalDebit: 0, totalCredit: 0, balance: 0 },
@@ -870,6 +875,7 @@ userSchema.methods.updateAccountingBalances = function() {
   });
 };
 
+// ===================== 📈 AYLIQ MÜHASİBAT YENİLƏMƏ METODU =====================
 userSchema.methods.updateMonthlyAccounting = function(entry) {
   if (entry.status !== 'posted') return;
   
@@ -885,16 +891,7 @@ userSchema.methods.updateMonthlyAccounting = function(entry) {
     }
   }
 };
-
-// ===================== 🏢 ƏSAS VƏSAİTLƏR MIDDLEWARE VƏ METODLARI =====================
-userSchema.pre('save', function(next) {
-  if (this.isModified('assets')) {
-    this.updateAssetStatistics();
-    this.updateDepartmentValues();
-  }
-  next();
-});
-
+// ===================== 🏢 ƏSAS VƏSAİTLƏR METODLARI =====================
 userSchema.methods.updateAssetStatistics = function() {
   const activeAssets = this.assets.filter(asset => asset.status === "Aktiv");
   
