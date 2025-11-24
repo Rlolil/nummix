@@ -1,8 +1,22 @@
 import Transaction from "../models/Transaction.js";
+import mongoose from "mongoose";
 
 export const getGeneralLedgerWithTotals = async (req, res) => {
   try {
-    const transactions = await Transaction.find().sort({ date: 1 }).lean();
+    const userId = req.user._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User ID tapılmadı. Zəhmət olmasa login olun",
+      });
+    }
+
+    const transactions = await Transaction.find({
+      "createdBy.userId": userId,
+    })
+      .sort({ date: 1 })
+      .lean();
 
     const ledger = {};
 
@@ -57,6 +71,7 @@ export const getGeneralLedgerWithTotals = async (req, res) => {
       .reduce((sum, acc) => sum + acc.balance, 0);
 
     res.json({
+      success: true,
       totals: {
         totalAssets,
         totalLiabilities,
@@ -68,6 +83,6 @@ export const getGeneralLedgerWithTotals = async (req, res) => {
     });
   } catch (err) {
     console.error("General Ledger Error:", err);
-    res.status(500).json({ error: "Server xətası" });
+    res.status(500).json({ success: false, error: "Server xətası" });
   }
 };

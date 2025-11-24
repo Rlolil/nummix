@@ -23,8 +23,10 @@ import generalLedgerRoutes from "./routes/generalLedgerRoutes.js";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./swaggerOptions.js";
 import paymentsRoute from "./routes/paymentsRoute.js";
-
+import financialReportsRouter from "./routes/financalReportsRoutes.js";
+import financeDashboardRoute from "./routes/financeDashboardRoute.js";
 dotenv.config();
+
 const app = express();
 // middlewares
 app.use(cors());
@@ -68,6 +70,8 @@ app.use("/api/products", productsRoute);
 app.use("/api/warehouses", warehousesRoute);
 app.use("/api/warehouse-operations", warehouseOperationsRoute);
 app.use("/api/inventory", inventoryRoute);
+app.use("/api/financial-reports", financialReportsRouter);
+app.use("/api/financial-dashboard", financeDashboardRoute);
 connectDB();
 
 const PORT = process.env.PORT || 5000;

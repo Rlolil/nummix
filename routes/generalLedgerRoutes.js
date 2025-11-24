@@ -1,8 +1,9 @@
 import express from "express";
 import { getGeneralLedgerWithTotals } from "../controllers/GeneralLedgerController.js";
+import protect from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
-
+router.use(protect);
 /**
  * @swagger
  * tags:

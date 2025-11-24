@@ -1,13 +1,18 @@
 import Budget from "../models/Budget.js";
 import ExcelJS from "exceljs";
 
-//Yeni büdcə planı yaratmaq
+// Yeni büdcə planı yaratmaq
 export const createBudget = async (req, res) => {
   try {
     const { department, year, monthlyBudgets } = req.body;
+    const userId = req.user?._id;
 
-    // eyni departament və il üçün təkrar olmasın
-    const existingBudget = await Budget.findOne({ department, year });
+    // eyni departament və il üçün təkrar olmasın (istifadəçiyə görə)
+    const existingBudget = await Budget.findOne({
+      department,
+      year,
+      createdBy: userId,
+    });
     if (existingBudget) {
       return res.status(400).json({
         message: "Bu departament üçün bu il artıq büdcə planı mövcuddur.",
@@ -18,7 +23,7 @@ export const createBudget = async (req, res) => {
       department,
       year,
       monthlyBudgets,
-      createdBy: req.user?._id, // Auth varsa istifadəçidən gəlir
+      createdBy: userId,
     });
 
     await budget.save();
@@ -29,10 +34,14 @@ export const createBudget = async (req, res) => {
   }
 };
 
-//Bütün büdcələri gətir (ümumi siyahı)
+// Bütün büdcələri gətir (istifadəçiyə görə)
 export const getBudgets = async (req, res) => {
   try {
-    const budgets = await Budget.find().sort({ year: -1, department: 1 });
+    const userId = req.user._id;
+    const budgets = await Budget.find({ createdBy: userId }).sort({
+      year: -1,
+      department: 1,
+    });
     res.status(200).json(budgets);
   } catch (error) {
     console.error("Get Budgets Error:", error);
@@ -40,11 +49,16 @@ export const getBudgets = async (req, res) => {
   }
 };
 
-//Departament üzrə illik büdcə detalları (chart və cədvəl üçün)
+// Departament üzrə illik büdcə detalları
 export const getBudgetByDepartment = async (req, res) => {
   try {
+    const userId = req.user._id;
     const { department, year } = req.params;
-    const budget = await Budget.findOne({ department, year });
+    const budget = await Budget.findOne({
+      department,
+      year,
+      createdBy: userId,
+    });
 
     if (!budget) {
       return res
@@ -58,23 +72,23 @@ export const getBudgetByDepartment = async (req, res) => {
     res.status(500).json({ message: "Server xətası baş verdi." });
   }
 };
-//Mövcud büdcəni yeniləmək (məs: faktiki xərcləri dəyişmək)
+
+// Mövcud büdcəni yeniləmək
 export const updateBudget = async (req, res) => {
   try {
-    const id = req.params.id.trim(); // Budget ID (Mongo ObjectId)
+    const userId = req.user._id;
+    const id = req.params.id.trim();
     const { monthlyBudgets } = req.body;
 
-    const budget = await Budget.findById(id);
+    const budget = await Budget.findOne({ _id: id, createdBy: userId });
     if (!budget) {
       return res.status(404).json({ message: "Büdcə tapılmadı." });
     }
 
-    // Yeni aylıq məlumatları əvəz et (əgər gəlirsə)
     if (monthlyBudgets) {
       budget.monthlyBudgets = monthlyBudgets;
     }
 
-    // Mongoose pre-save hook avtomatik hesablayacaq
     await budget.save();
 
     res.status(200).json({ message: "Büdcə uğurla yeniləndi.", budget });
@@ -84,27 +98,34 @@ export const updateBudget = async (req, res) => {
   }
 };
 
+// Büdcəni silmək
 export const deleteBudget = async (req, res) => {
   try {
+    const userId = req.user._id;
     const id = req.params.id.trim();
-    const budget = await Budget.findByIdAndDelete(id);
+    const budget = await Budget.findOneAndDelete({
+      _id: id,
+      createdBy: userId,
+    });
 
     if (!budget) {
-      return res.status(404).json({ message: "Budget not found" });
+      return res.status(404).json({ message: "Budget tapılmadı" });
     }
 
-    res.status(200).json({ message: "Budget deleted successfully" });
+    res.status(200).json({ message: "Budget uğurla silindi" });
   } catch (error) {
     console.error("Delete Budget Error:", error);
-    res.status(500).json({ message: "Failed to delete budget", error });
+    res.status(500).json({ message: "Büdcə silinərkən xətа baş verdi", error });
   }
 };
-// Bütün büdcələr üzrə ümumi hesabat
+
+// Ümumi hesabat
 export const getBudgetReport = async (req, res) => {
   try {
+    const userId = req.user._id;
     const { department, year } = req.query;
 
-    const query = {};
+    const query = { createdBy: userId };
     if (department) query.department = { $regex: new RegExp(department, "i") };
     if (year) query.year = Number(year);
 
@@ -121,7 +142,6 @@ export const getBudgetReport = async (req, res) => {
       });
     }
 
-    // Ümumi cəmləri hesablayırıq
     let totalPlanned = 0;
     let totalActual = 0;
     let totalDifference = 0;
@@ -179,12 +199,13 @@ export const getBudgetReport = async (req, res) => {
   }
 };
 
-// Büdcə məlumatlarını Excel faylı kimi ixrac et
+// Excel export
 export const exportBudgetToExcel = async (req, res) => {
   try {
+    const userId = req.user._id;
     const { department, year } = req.query;
 
-    const query = {};
+    const query = { createdBy: userId };
     if (department) query.department = { $regex: new RegExp(department, "i") };
     if (year) query.year = Number(year);
 
@@ -196,11 +217,9 @@ export const exportBudgetToExcel = async (req, res) => {
         .json({ message: "No budget data found for this filter" });
     }
 
-    // Workbook və Sheet
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Budget Report");
 
-    // Başlıqlar
     worksheet.columns = [
       { header: "Department", key: "department", width: 25 },
       { header: "Year", key: "year", width: 10 },
@@ -213,7 +232,6 @@ export const exportBudgetToExcel = async (req, res) => {
       { header: "Status", key: "status", width: 15 },
     ];
 
-    // 🔹 Məlumatların əlavə olunması
     budgets.forEach((budget) => {
       (budget.monthlyBudgets || []).forEach((month) => {
         (month.categories || []).forEach((cat) => {
@@ -232,7 +250,6 @@ export const exportBudgetToExcel = async (req, res) => {
       });
     });
 
-    // Header dizaynı
     const headerRow = worksheet.getRow(1);
     headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
     headerRow.fill = {
@@ -242,7 +259,6 @@ export const exportBudgetToExcel = async (req, res) => {
     };
     headerRow.alignment = { vertical: "middle", horizontal: "center" };
 
-    // Cavab olaraq Excel göndər
     const buffer = await workbook.xlsx.writeBuffer();
 
     res.setHeader(

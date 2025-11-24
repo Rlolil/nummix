@@ -57,41 +57,6 @@ router.get("/", getBudgets);
 
 /**
  * @swagger
- * /budgets/export/excel:
- *   get:
- *     summary: Büdcə məlumatlarını Excel-ə ixrac et
- *     tags: [Budgets]
- *     responses:
- *       200:
- *         description: Excel faylı download olunur
- */
-router.get("/export/excel", exportBudgetToExcel);
-
-/**
- * @swagger
- * /budgets/{department}/{year}:
- *   get:
- *     summary: Departament üzrə illik büdcə detalları
- *     tags: [Budgets]
- *     parameters:
- *       - in: path
- *         name: department
- *         required: true
- *         schema:
- *           type: string
- *       - in: path
- *         name: year
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Departament büdcəsi
- */
-router.get("/:department/:year", getBudgetByDepartment);
-
-/**
- * @swagger
  * /budgets/{id}:
  *   put:
  *     summary: Büdcəni yeniləmək
@@ -137,6 +102,18 @@ router.delete("/:id", deleteBudget);
 
 /**
  * @swagger
+ * /budgets/export/excel:
+ *   get:
+ *     summary: Büdcə məlumatlarını Excel-ə ixrac et
+ *     tags: [Budgets]
+ *     responses:
+ *       200:
+ *         description: Excel faylı download olunur
+ */
+router.get("/export/excel", exportBudgetToExcel);
+
+/**
+ * @swagger
  * /budgets/report:
  *   get:
  *     summary: Büdcə hesabatı
@@ -146,5 +123,28 @@ router.delete("/:id", deleteBudget);
  *         description: Büdcə hesabat məlumatları
  */
 router.get("/report", getBudgetReport);
+
+/**
+ * @swagger
+ * /budgets/{department}/{year}:
+ *   get:
+ *     summary: Departament üzrə illik büdcə detalları
+ *     tags: [Budgets]
+ *     parameters:
+ *       - in: path
+ *         name: department
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: year
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Departament büdcəsi
+ */
+router.get("/:department/:year", getBudgetByDepartment);
 
 export default router;

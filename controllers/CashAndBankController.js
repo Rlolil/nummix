@@ -1,5 +1,5 @@
 import CashAndBank from "../models/CashAndBank.js";
-
+import ExcelJS from "exceljs";
 // Yeni əməliyyat əlavə et
 const createTransaction = async (req, res) => {
   try {
@@ -11,7 +11,6 @@ const createTransaction = async (req, res) => {
       type,
       account,
       description,
-      createdBy,
     } = req.body;
 
     const transaction = new CashAndBank({
@@ -22,7 +21,7 @@ const createTransaction = async (req, res) => {
       type,
       account: type === "bank" ? account : undefined,
       description,
-      createdBy,
+      createdBy: req.user._id, // user ID JWT-dən avtomatik gəlir
     });
 
     await transaction.save();
@@ -32,59 +31,126 @@ const createTransaction = async (req, res) => {
   }
 };
 
-// Bütün əməliyyatları götür
+// Bütün əməliyyatları götür (yalnız öz user-in əməliyyatları)
 const getAllTransactions = async (req, res) => {
   try {
-    const transactions = await CashAndBank.find().populate(
-      "createdBy",
-      "fullName"
-    );
-    res.json(transactions);
+    const transactions = await CashAndBank.find({
+      createdBy: req.user._id,
+    }).sort({ createdAt: -1 });
+    res.status(200).json(transactions);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Server xətası" });
   }
 };
 
-// Tək əməliyyatın detallarını götür
+// Tək əməliyyatın detallarını götür (yalnız öz user-in əməliyyatı)
 const getTransactionById = async (req, res) => {
   try {
-    const transaction = await CashAndBank.findById(req.params.id).populate(
-      "createdBy",
-      "fullName"
-    );
+    const transaction = await CashAndBank.findOne({
+      _id: req.params.id,
+      createdBy: req.user._id,
+    });
     if (!transaction)
-      return res.status(404).json({ message: "Transaction not found" });
-    res.json(transaction);
+      return res.status(404).json({ message: "Transaction tapılmadı" });
+    res.status(200).json(transaction);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Əməliyyatı update et
+// Əməliyyatı update et (yalnız öz user-in əməliyyatı)
 const updateTransaction = async (req, res) => {
   try {
-    const transaction = await CashAndBank.findByIdAndUpdate(
-      req.params.id,
+    const transaction = await CashAndBank.findOneAndUpdate(
+      { _id: req.params.id, createdBy: req.user._id },
       req.body,
       { new: true }
     );
     if (!transaction)
-      return res.status(404).json({ message: "Transaction not found" });
-    res.json(transaction);
+      return res
+        .status(404)
+        .json({ message: "Transaction tapılmadı və ya icazəniz yoxdur" });
+    res.status(200).json(transaction);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// Əməliyyatı sil
+// Əməliyyatı sil (yalnız öz user-in əməliyyatı)
 const deleteTransaction = async (req, res) => {
   try {
-    const transaction = await CashAndBank.findByIdAndDelete(req.params.id);
+    const transaction = await CashAndBank.findOneAndDelete({
+      _id: req.params.id,
+      createdBy: req.user._id,
+    });
     if (!transaction)
-      return res.status(404).json({ message: "Transaction not found" });
-    res.json({ message: "Transaction deleted successfully" });
+      return res
+        .status(404)
+        .json({ message: "Transaction tapılmadı və ya icazəniz yoxdur" });
+    res.status(200).json({ message: "Transaction silindi" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Excel export — yalnız istifadəçiyə aid əməliyyatlar
+const exportTransactionsExcel = async (req, res) => {
+  try {
+    const transactions = await CashAndBank.find({
+      createdBy: req.user._id,
+    }).sort({ createdAt: -1 });
+
+    if (!transactions.length) {
+      return res.status(404).json({ message: "Heç bir əməliyyat tapılmadı" });
+    }
+
+    // Excel yarat
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Cash-Bank Report");
+
+    // Sütunlar
+    worksheet.columns = [
+      { header: "Operation Type", key: "operationType", width: 20 },
+      { header: "Amount", key: "amount", width: 15 },
+      { header: "Currency", key: "currency", width: 15 },
+      { header: "Category", key: "category", width: 20 },
+      { header: "Type", key: "type", width: 15 },
+      { header: "Account", key: "account", width: 20 },
+      { header: "Description", key: "description", width: 30 },
+      { header: "Date", key: "createdAt", width: 20 },
+    ];
+
+    // Məlumatları əlavə et
+    transactions.forEach((t) => {
+      worksheet.addRow({
+        operationType: t.operationType,
+        amount: t.amount,
+        currency: t.currency,
+        category: t.category,
+        type: t.type,
+        account: t.account || "-",
+        description: t.description,
+        createdAt: t.createdAt.toLocaleString(),
+      });
+    });
+
+    // Header response
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=cash_bank_transactions.xlsx"
+    );
+
+    // Fayı göndər
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Excel export xətası", error: error.message });
   }
 };
 
@@ -95,4 +161,5 @@ export default {
   getTransactionById,
   updateTransaction,
   deleteTransaction,
+  exportTransactionsExcel,
 };

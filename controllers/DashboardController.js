@@ -1,9 +1,13 @@
 import Transaction from "../models/Transaction.js";
 
+// --- Dashboard: Ümumi gəlir/xərc/mənfəət ---
 export const getDashboardStats = async (req, res) => {
   try {
-    // --- ÜMUMİ GƏLİR ---
+    const userId = req.user._id;
+
+    // Ümumi gəlir
     const incomeResult = await Transaction.aggregate([
+      { $match: { "createdBy.userId": userId } }, // yalnız öz əməliyyatları
       { $unwind: "$entries" },
       {
         $match: {
@@ -21,8 +25,9 @@ export const getDashboardStats = async (req, res) => {
 
     const totalIncome = incomeResult[0]?.totalIncome || 0;
 
-    // --- ÜMUMİ XƏRC ---
+    // Ümumi xərc
     const expenseResult = await Transaction.aggregate([
+      { $match: { "createdBy.userId": userId } },
       { $unwind: "$entries" },
       {
         $match: {
@@ -39,28 +44,23 @@ export const getDashboardStats = async (req, res) => {
     ]);
 
     const totalExpense = expenseResult[0]?.totalExpense || 0;
-
-    // --- XALİS MƏNFƏƏT ---
     const netIncome = totalIncome - totalExpense;
 
-    // Cavab
-    res.json({
-      totalIncome,
-      totalExpense,
-      netIncome,
-    });
+    res.json({ totalIncome, totalExpense, netIncome });
   } catch (error) {
     console.error("Dashboard Error:", error);
     res.status(500).json({ message: "Server xətası" });
   }
 };
 
-// Ümumi Aktivlər
+// --- Ümumi aktivlər ---
 export const getTotalAssets = async (req, res) => {
   try {
+    const userId = req.user._id;
     const assetAccounts = ["Cash", "Bank"];
 
     const result = await Transaction.aggregate([
+      { $match: { "createdBy.userId": userId } },
       { $unwind: "$entries" },
       { $match: { "entries.account": { $in: assetAccounts } } },
       {
@@ -95,27 +95,25 @@ export const getTotalAssets = async (req, res) => {
       },
     ]);
 
-    // Ümumi aktivlər = Cash + Bank balansları
     const totalAssets = result.reduce((sum, acc) => sum + acc.balance, 0);
 
-    res.json({
-      totalAssets,
-      breakdown: result, // istəsən hər bir hesabın balansını da göstərir
-    });
+    res.json({ totalAssets, breakdown: result });
   } catch (error) {
     console.error("Get Total Assets Error:", error);
     res.status(500).json({ message: "Server xətası" });
   }
 };
-// Son 6 ay Gəlir və Xərc
+
+// --- Son 6 ay gəlir/xərc ---
 export const getIncomeExpenseLast6Months = async (req, res) => {
   try {
+    const userId = req.user._id;
     const today = new Date();
     const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(today.getMonth() - 5); // son 6 ay
+    sixMonthsAgo.setMonth(today.getMonth() - 5);
 
-    // Transaction-ları unwind və filter ilə alırıq
     const data = await Transaction.aggregate([
+      { $match: { "createdBy.userId": userId } },
       { $unwind: "$entries" },
       {
         $match: {
@@ -138,14 +136,10 @@ export const getIncomeExpenseLast6Months = async (req, res) => {
         $group: {
           _id: "$month",
           income: {
-            $sum: {
-              $cond: [{ $eq: ["$type", "Sales"] }, "$amount", 0],
-            },
+            $sum: { $cond: [{ $eq: ["$type", "Sales"] }, "$amount", 0] },
           },
           expense: {
-            $sum: {
-              $cond: [{ $eq: ["$type", "Expense"] }, "$amount", 0],
-            },
+            $sum: { $cond: [{ $eq: ["$type", "Expense"] }, "$amount", 0] },
           },
         },
       },
@@ -153,11 +147,7 @@ export const getIncomeExpenseLast6Months = async (req, res) => {
     ]);
 
     res.json(
-      data.map((d) => ({
-        month: d._id,
-        income: d.income,
-        expense: d.expense,
-      }))
+      data.map((d) => ({ month: d._id, income: d.income, expense: d.expense }))
     );
   } catch (err) {
     console.error(err);
@@ -165,14 +155,16 @@ export const getIncomeExpenseLast6Months = async (req, res) => {
   }
 };
 
-// Son 6 ay Mənfəət Dinamikası
+// --- Son 6 ay mənfəət ---
 export const getProfitDynamicsLast6Months = async (req, res) => {
   try {
+    const userId = req.user._id;
     const today = new Date();
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(today.getMonth() - 5);
 
     const data = await Transaction.aggregate([
+      { $match: { "createdBy.userId": userId } },
       { $unwind: "$entries" },
       {
         $match: {
@@ -208,26 +200,23 @@ export const getProfitDynamicsLast6Months = async (req, res) => {
       { $sort: { _id: 1 } },
     ]);
 
-    res.json(
-      data.map((d) => ({
-        month: d._id,
-        profit: d.profit,
-      }))
-    );
+    res.json(data.map((d) => ({ month: d._id, profit: d.profit })));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server xətası" });
   }
 };
 
+// --- Balansın faiz breakdown-u ---
 export const getBalanceBreakdownPercentage = async (req, res) => {
   try {
-    // Aktiv, Öhdəlik və Kapital hesabları
+    const userId = req.user._id;
     const assetAccounts = ["Cash", "Bank"];
-    const liabilityAccounts = ["Expense"]; // nümunə
-    const equityAccounts = ["Sales"]; // sadəcə kapital nümunəsi
+    const liabilityAccounts = ["Expense"];
+    const equityAccounts = ["Sales"];
 
     const result = await Transaction.aggregate([
+      { $match: { "createdBy.userId": userId } },
       { $unwind: "$entries" },
       {
         $match: {
@@ -268,22 +257,17 @@ export const getBalanceBreakdownPercentage = async (req, res) => {
       },
     ]);
 
-    // Hər bir bölmənin cəmini hesabla
     const totalAssets = result
       .filter((acc) => assetAccounts.includes(acc.account))
       .reduce((sum, acc) => sum + acc.balance, 0);
-
     const totalLiabilities = result
       .filter((acc) => liabilityAccounts.includes(acc.account))
       .reduce((sum, acc) => sum + acc.balance, 0);
-
     const totalEquity = result
       .filter((acc) => equityAccounts.includes(acc.account))
       .reduce((sum, acc) => sum + acc.balance, 0);
 
     const grandTotal = totalAssets + totalLiabilities + totalEquity;
-
-    // Faiz hesabı
     const breakdown = {
       assets: ((totalAssets / grandTotal) * 100).toFixed(2),
       liabilities: ((totalLiabilities / grandTotal) * 100).toFixed(2),
@@ -295,7 +279,7 @@ export const getBalanceBreakdownPercentage = async (req, res) => {
       totalLiabilities,
       totalEquity,
       breakdownPercent: breakdown,
-      accountsBreakdown: result, // ətraflı balans hər hesab üzrə
+      accountsBreakdown: result,
     });
   } catch (err) {
     console.error("Balance Percentage Error:", err);

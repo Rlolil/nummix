@@ -28,6 +28,7 @@ import {
   getEmployeeLeaveById,
   getAttendanceById,
 } from "../controllers/employeeController.js";
+import protect from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
@@ -36,7 +37,7 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 },
 });
-
+router.use(protect);
 /**
  * @swagger
  * tags:

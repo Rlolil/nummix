@@ -1,7 +1,9 @@
 import express from "express";
 import cashAndBankController from "../controllers/CashAndBankController.js";
+import protect from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
+router.use(protect);
 
 /**
  * @swagger
@@ -9,6 +11,23 @@ const router = express.Router();
  *   name: CashAndBank
  *   description: Nağd və bank əməliyyatları
  */
+
+/**
+ * @swagger
+ * /cash-and-bank/export/excel:
+ *   get:
+ *     summary: İstifadəçiyə aid bütün əməliyyatları Excel formatında yükləmək
+ *     tags: [CashAndBank]
+ *     responses:
+ *       200:
+ *         description: Excel faylı uğurla yaradıldı və yükləndi.
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+router.get("/export/excel", cashAndBankController.exportTransactionsExcel);
 
 /**
  * @swagger
@@ -23,14 +42,20 @@ const router = express.Router();
  *           schema:
  *             type: object
  *             properties:
- *               account:
+ *               operationType:
  *                 type: string
- *                 enum: [Cash, Bank]
- *               type:
- *                 type: string
- *                 enum: [debit, credit]
+ *                 enum: [inflow, outflow]
  *               amount:
  *                 type: number
+ *               currency:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *                 enum: [cash, bank]
+ *               account:
+ *                 type: string
  *               description:
  *                 type: string
  *     responses:
@@ -43,7 +68,7 @@ router.post("/", cashAndBankController.createTransaction);
  * @swagger
  * /cash-and-bank:
  *   get:
- *     summary: Bütün əməliyyatları gətirmək
+ *     summary: İstifadəçiyə aid bütün əməliyyatları gətirmək
  *     tags: [CashAndBank]
  *     responses:
  *       200:
@@ -55,7 +80,7 @@ router.get("/", cashAndBankController.getAllTransactions);
  * @swagger
  * /cash-and-bank/{id}:
  *   get:
- *     summary: ID üzrə əməliyyat məlumatını gətirmək
+ *     summary: ID üzrə əməliyyatı gətirmək
  *     tags: [CashAndBank]
  *     parameters:
  *       - in: path
@@ -73,7 +98,7 @@ router.get("/:id", cashAndBankController.getTransactionById);
  * @swagger
  * /cash-and-bank/{id}:
  *   put:
- *     summary: Əməliyyatı yeniləmək
+ *     summary: Əməliyyat məlumatını yeniləmək
  *     tags: [CashAndBank]
  *     parameters:
  *       - in: path
@@ -88,14 +113,18 @@ router.get("/:id", cashAndBankController.getTransactionById);
  *           schema:
  *             type: object
  *             properties:
- *               account:
+ *               operationType:
  *                 type: string
- *                 enum: [Cash, Bank]
- *               type:
- *                 type: string
- *                 enum: [debit, credit]
  *               amount:
  *                 type: number
+ *               currency:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *               account:
+ *                 type: string
  *               description:
  *                 type: string
  *     responses:
