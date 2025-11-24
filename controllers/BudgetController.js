@@ -1,32 +1,95 @@
 import Budget from "../models/Budget.js";
 import ExcelJS from "exceljs";
 
-// Yeni büdcə planı yaratmaq
+// Yeni büdcə planı yaratmaq (Rüblük dəstəklənir)
 export const createBudget = async (req, res) => {
   try {
-    const { department, year, monthlyBudgets } = req.body;
+    const { type, category, amount, startDate, period } = req.body;
     const userId = req.user?._id;
 
-    // eyni departament və il üçün təkrar olmasın (istifadəçiyə görə)
+    if (!type || !category || !amount || !startDate || !period) {
+      return res.status(400).json({ message: "Bütün sahələr tələb olunur" });
+    }
+
+    const start = new Date(startDate);
+    const year = start.getFullYear();
+
+    // Eyni departament və il üçün təkrar olmasın
     const existingBudget = await Budget.findOne({
-      department,
+      department: type,
       year,
       createdBy: userId,
     });
+
     if (existingBudget) {
       return res.status(400).json({
         message: "Bu departament üçün bu il artıq büdcə planı mövcuddur.",
       });
     }
 
+    // Rüblük period üçün 3 ayı avtomatik yarat
+    let monthlyBudgets = [];
+
+    if (period.toLowerCase() === "rüblük") {
+      // Başlanğıc ay indexi (0 = Yanvar)
+      const startMonth = start.getMonth();
+      // Rüb: başlanğıc ay + 0, 1, 2
+      for (let i = 0; i < 3; i++) {
+        const monthIndex = startMonth + i;
+        const monthName = new Date(year, monthIndex, 1).toLocaleString(
+          "default",
+          { month: "long" }
+        );
+
+        monthlyBudgets.push({
+          month: monthName,
+          categories: [
+            {
+              name: category,
+              plannedAmount: Number(amount),
+              actualAmount: 0,
+              difference: Number(amount),
+              usageRate: 0,
+              status: "within_budget",
+            },
+          ],
+          plannedTotal: Number(amount),
+          actualTotal: 0,
+          difference: Number(amount),
+          usageRate: 0,
+        });
+      }
+    } else {
+      // Ayliq və ya digər periodlar üçün sadə nümunə
+      const monthName = start.toLocaleString("default", { month: "long" });
+      monthlyBudgets.push({
+        month: monthName,
+        categories: [
+          {
+            name: category,
+            plannedAmount: Number(amount),
+            actualAmount: 0,
+            difference: Number(amount),
+            usageRate: 0,
+            status: "within_budget",
+          },
+        ],
+        plannedTotal: Number(amount),
+        actualTotal: 0,
+        difference: Number(amount),
+        usageRate: 0,
+      });
+    }
+
     const budget = new Budget({
-      department,
+      department: type,
       year,
       monthlyBudgets,
       createdBy: userId,
     });
 
     await budget.save();
+
     res.status(201).json({ message: "Büdcə planı uğurla yaradıldı.", budget });
   } catch (error) {
     console.error("Create Budget Error:", error);
