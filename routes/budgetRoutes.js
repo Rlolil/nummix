@@ -8,9 +8,10 @@ import {
   getBudgetReport,
   exportBudgetToExcel,
 } from "../controllers/BudgetController.js";
+import protect from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
-
+router.use(protect);
 /**
  * @swagger
  * tags:
