@@ -19,6 +19,9 @@ const OrderSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// Text index for order number search
+OrderSchema.index({ orderNumber: "text" });
+
 const Order = mongoose.model("Order", OrderSchema);
 
 export default Order;

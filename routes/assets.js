@@ -43,14 +43,14 @@ const router = express.Router();
 /**
  * @swagger
  * tags:
- *   name: Assets
- *   description: Vəsait idarəetmə əməliyyatları
- *   name: Categories  
- *   description: Kateqoriya idarəetmə əməliyyatları
- *   name: Reports
- *   description: Hesabat və statistikalar
- *   name: Documents
- *   description: Sənəd idarəetmə əməliyyatları
+ *   - name: Assets
+ *     description: Vəsait idarəetmə əməliyyatları
+ *   - name: Categories
+ *     description: Kateqoriya idarəetmə əməliyyatları
+ *   - name: Reports
+ *     description: Hesabat və statistikalar
+ *   - name: Documents
+ *     description: Sənəd idarəetmə əməliyyatları
  */
 
 /**

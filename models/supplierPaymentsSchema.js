@@ -16,6 +16,9 @@ const SupplierPaymentSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// Add text index to support search by payment number
+SupplierPaymentSchema.index({ paymentNumber: "text" });
+
 const SupplierPayment = mongoose.model("SupplierPayment", SupplierPaymentSchema);
 
 export default SupplierPayment;

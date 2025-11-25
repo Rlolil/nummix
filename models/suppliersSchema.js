@@ -15,6 +15,9 @@ const SupplierSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// Add text index for supplier searchable fields
+SupplierSchema.index({ companyName: "text", contactName: "text", address: "text" });
+
 const Supplier = mongoose.model("Supplier", SupplierSchema);
 
 export default Supplier;

@@ -39,6 +39,9 @@ const WarehouseSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// Add text index for warehouse name and location
+WarehouseSchema.index({ name: "text", location: "text" });
+
 const Warehouse = mongoose.model("Warehouses", WarehouseSchema);
 
 export default Warehouse;

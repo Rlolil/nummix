@@ -14,6 +14,9 @@ const SaleSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// Add text index for invoiceNumber to support search
+SaleSchema.index({ invoiceNumber: "text" });
+
 const Sale = mongoose.model("Sales", SaleSchema);
 
 export default Sale;

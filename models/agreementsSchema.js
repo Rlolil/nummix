@@ -17,6 +17,9 @@ const AgreementSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// Add text index for full-text search used in controllers
+AgreementSchema.index({ agreementNumber: "text", terms: "text", notes: "text" });
+
 const Agreement = mongoose.model("Agreement", AgreementSchema);
 
 export default Agreement;

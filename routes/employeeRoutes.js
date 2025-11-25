@@ -49,24 +49,16 @@ router.use(protect);
 /**
  * @swagger
  * tags:
- *   name: Employees
- *   description: İşçilərin idarə olunması
- */
-
-/**
- * @swagger
-
- * tags:
- *   name: Employees
- *   description: İşçi idarəetmə əməliyyatları
- *   name: Notifications
- *   description: Bildiriş idarəetmə əməliyyatları
- *   name: Leaves
- *   description: Məzuniyyət idarəetmə əməliyyatları
- *   name: Attendance
- *   description: İş vaxtı qeydləri
- *   name: Payments
- *   description: Ödəniş və vergi əməliyyatları
+ *   - name: Employees
+ *     description: İşçi idarəetmə əməliyyatları
+ *   - name: Notifications
+ *     description: Bildiriş idarəetmə əməliyyatları
+ *   - name: Leaves
+ *     description: Məzuniyyət idarəetmə əməliyyatları
+ *   - name: Attendance
+ *     description: İş vaxtı qeydləri
+ *   - name: Payments
+ *     description: Ödəniş və vergi əməliyyatları
  */
 
 /**

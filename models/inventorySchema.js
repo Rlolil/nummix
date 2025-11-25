@@ -16,6 +16,9 @@ const InventorySchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// Add text index for SKU, product and location to support $text searches
+InventorySchema.index({ SKU: "text", product: "text", localtion: "text" });
+
 const Inventory = mongoose.model("Inventory", InventorySchema);
 
 export default Inventory;

@@ -45,25 +45,19 @@ const router = express.Router();
 
 /**
  * @swagger
-
  * tags:
- *   name: Authentication
- *   description: İstifadəçi qeydiyyatı və giriş əməliyyatları
- * 
- *   name: Users
- *   description: İstifadəçi CRUD əməliyyatları
- * 
- *   name: Financial
- *   description: Maliyyə məlumatları idarəetməsi
- * 
- *   name: Calendar
- *   description: Təqvim və gün idarəetməsi
- * 
- *   name: Events
- *   description: Hadisə idarəetməsi
- * 
- *   name: Accounting
- *   description: Mühasibat uçotu əməliyyatları
+ *   - name: Authentication
+ *     description: İstifadəçi qeydiyyatı və giriş əməliyyatları
+ *   - name: Users
+ *     description: İstifadəçi CRUD əməliyyatları
+ *   - name: Financial
+ *     description: Maliyyə məlumatları idarəetməsi
+ *   - name: Calendar
+ *     description: Təqvim və gün idarəetməsi
+ *   - name: Events
+ *     description: Hadisə idarəetməsi
+ *   - name: Accounting
+ *     description: Mühasibat uçotu əməliyyatları
  */
 
 /**

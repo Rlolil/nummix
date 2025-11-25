@@ -46,6 +46,9 @@ const ProductsSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Text index to support product search by name, SKU, barcode and category
+ProductsSchema.index({ SKU: "text", barcode: "text", name: "text", category: "text" });
+
 const Product = mongoose.model("Products", ProductsSchema);
 
 export default Product;
